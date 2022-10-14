@@ -55,9 +55,9 @@ def get_weights(tickers, start_date):
 # begins
 sb.color_palette("Spectral", as_cmap=True)
 #^ seaborn colors
-start_date = datetime.datetime(2022,1,1) #year, month, day
-#tickers = ['AAPL', 'AMD', 'JPM'] #random 3 decent stocks
-tickers = ['TSLA', 'KO', 'AAPL', 'AXP', 'RACE', 'AMD', 'JPM', 'UNH', 'PLD', 'MRK', 'BHP', 'WMT', 'APD', 'T', 'XOM'] #algory previous portfolio
+start_date = datetime.datetime(2018,1,1) #year, month, day
+tickers = ['AAPL','NVDA','UNH','JPM','XLE','COKE','NCLH','ADBE','F','GOLD'] #random 3 decent stocks
+# tickers = ['TSLA', 'KO', 'AAPL', 'AXP', 'RACE', 'AMD', 'JPM', 'UNH', 'PLD', 'MRK', 'BHP', 'WMT', 'APD', 'T', 'XOM'] #algory previous portfolio
 #tickers = ['OXY', 'CEG', 'HES', 'CTRA', 'DVN', 'MPC', 'ENPH', 'XOM', 'VLO', 'MRO'] #insane sharpe + L + ratio
 #tickers = ['LAD', 'TNL', 'MLI', 'FBP', 'HRI', 'DVN', 'MRO', 'QCOM', 'BRK-A', 'MU'] #good outlook
 #tickers = ['TRMD', 'AMR', 'VERU', 'PBF', 'NEX', 'TMDX', 'LNTH', 'CEIX', 'STNG', 'TH']
