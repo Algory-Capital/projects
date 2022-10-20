@@ -61,10 +61,12 @@ print(y_hc)
 
 order = {}
 for i in range(len(y_hc)):
-    order[tickers[i]] = y_hc[i]
+    order[tickers[i]] = [y_hc[i], i]
 
+# print(order)
+ordersorted = sorted_x = sorted(order.items(), key=operator.itemgetter(1))
+print(ordersorted)
 
-print(order)
 #
 # colors = ['red', 'blue', 'green', 'cyan', 'magenta']
 # for i in range(max(y_hc) + 1):
