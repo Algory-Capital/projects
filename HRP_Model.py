@@ -1,3 +1,12 @@
+%pip install pandas 
+*pip install pandas_datareader
+*pip install numpy 
+*pip install matplotlib.pyplot 
+*pip install seaborn
+*pip install sklearn 
+*pip install datetime 
+*pip install seaborn
+
 import pandas_datareader as get_data
 import pandas as pd
 import numpy as np
