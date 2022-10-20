@@ -120,8 +120,10 @@ def compute_serial_matrix(dist_mat, method="ward"):
     
     return seriated_dist, res_order, res_linkage
  
- 
+
 ordered_dist_mat, res_order, res_linkage = compute_serial_matrix(distances.values, method='single')
+print(distances.values)
+print(ordered_dist_mat)
 plt.pcolormesh(distances)
 plt.colorbar()
 plt.title('Original order distance matrix')
