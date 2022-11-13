@@ -52,7 +52,12 @@ app.get("/getData", function(req, res) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
       });
-      getData(tickers, startDates[0]).then((data) => {
+
+      oldestDate = startDates.sort((a, b) => {
+        return Date.parse(a) > Date.parse(b);
+      })[0];
+
+      getData(tickers, oldestDate).then((data) => {
         for (let ticker in data) {
             var adjClose = [];
             var dates = [];
