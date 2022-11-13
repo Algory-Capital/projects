@@ -22,21 +22,21 @@ const equitiesSchema = {
 
 const Equity = mongoose.model("Equity", equitiesSchema);
 
-async function getData(ticker, startDate) {
+async function getData(tickers, startDate) {
   const today = new Date().toJSON().slice(0, 10);
 
   const myData = yfin.historical({
-    symbol: ticker,
+    symbols: tickers,
     from: startDate,
     to: today,
     period: 'd'
-  }, function (err, quotes) {
-    if (err) {
-      res.send(err);
-    }
-  });
+  }).catch((err) => {
+    console.log(err);
+  })
   return myData;
 }
+
+
 
 app.get("/getData", function(req, res) {
 
@@ -46,52 +46,36 @@ app.get("/getData", function(req, res) {
       res.send(err);
     } else {
       var js = [];
+      var tickers = [];
+      var startDates = [];
       results.forEach(function(result) {
-        getData(result.ticker, result.startDate).then((data) => {
-          var adjClose = [];
-          var dates = [];
-          for (var i = data.length - 1; i >= 0; i--) {
-            adjClose.push(data[i].adjClose);
-            dates.push(JSON.stringify(data[i].date).slice(1, 11));
-          }
-          js.push({
-            ticker: result.ticker,
-            data: adjClose,
-            dates: dates
-          });
-          console.log(js);
-        }).catch((err) => {
-          console.log(err);
-        });
+        tickers.push(result.ticker);
+        startDates.push(result.startDate);
       });
-      console.log(js);
-      // var ticker = results[0].ticker;
-      // var startDate = results[0].startDate;
-      // var today = new Date().toJSON().slice(0, 10);
-      // yfin.historical({
-      //   symbol: ticker,
-      //   from: startDate,
-      //   to: today,
-      //   period: 'd'
-      // }, function (err, quotes) {
-      //   if (err) {
-      //     res.send(err);
-      //   } else {
-      //     var data = [];
-      //     var dates = [];
-      //     for (var i = quotes.length - 1; i >= 0; i--) {
-      //       data.push(quotes[i].adjClose);
-      //       dates.push(JSON.stringify(quotes[i].date).slice(1, 11));
-      //     }
-      //
-      //     res.send({
-      //       ticker: ticker,
-      //       data: data,
-      //       dates: dates
-      //     });
-      //   }
-      // });
-      res.send(js);
+      getData(tickers, startDates[0]).then((data) => {
+        for (let ticker in data) {
+            var adjClose = [];
+            var dates = [];
+            var idx = tickers.indexOf(ticker)
+            for (var i = data[ticker].length - 1; i >= 0; i--) {
+              adjClose.push(data[ticker][i].adjClose);
+              dates.push(JSON.stringify(data[ticker][i].date).slice(1, 11));
+            }
+
+            var start = dates.indexOf(startDates[idx])
+            adjClose = adjClose.slice(start);
+            dates = dates.slice(start);
+
+            js.push({
+              ticker: ticker,
+              data: adjClose,
+              dates: dates
+            });
+        }
+        res.send(js);
+      }).catch((err) => {
+        console.log(err);
+      });
     }
   });
 });
