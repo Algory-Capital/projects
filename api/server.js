@@ -111,23 +111,18 @@ app.get('/:ticker&:startDate&:startPrice', function(req, res) {
   });
 });
 
-app.post('/delete/:ticker', function(req, res) {
-  const ticker = req.body.ticker;
-
+app.get('/delete/:ticker', function(req, res) {
+  const ticker = req.params.ticker.toUpperCase();
+  Equity.deleteMany({ticker: ticker}, (err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      res.send(`Successfully deleted ${ticker} from database`);
+    }
+  });
 
 });
 
 app.listen(3000, function() {
   console.log("Server started on port 3000");
 });
-
-
-
-// async function test() {
-//   await axios.get("http://localhost:3000/getData").then((res) => {
-//     console.log(res);
-//   }).catch((err) => {
-//     console.log(err);
-//   });
-// };
-// test();
