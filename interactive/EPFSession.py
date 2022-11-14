@@ -77,4 +77,7 @@ sr = (port_returns-rf)/vol
 cm = plt.cm.get_cmap('RdBu')
 sc = plt.scatter(vol, port_returns-rf, c=sr, vmin=min(sr), vmax=max(sr), cmap=cm)
 plt.colorbar(sc)
+plt.xlabel('Volatility (STD)')
+plt.ylabel('Excess Returns (Mean)')
+plt.title('Efficient Portfolio Frontier')
 plt.show()
