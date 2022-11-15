@@ -64,14 +64,16 @@ app.get("/getData", function(req, res) {
       var tickers = [];
       var startDates = [];
       var shares = [];
+      var entryPrice = [];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
         shares.push(result.shares);
+        entryPrice.push(result.entryPrice);
       });
 
       var oldestDate = findEarliestDate(startDates);
-      
+
       getData(tickers, oldestDate).then((data) => {
         for (let ticker in data) {
             var adjClose = [];
@@ -89,6 +91,7 @@ app.get("/getData", function(req, res) {
             js.push({
               ticker: ticker,
               shares: shares[idx],
+              entryPrice: entryPrice[idx],
               data: adjClose,
               dates: dates
             });
