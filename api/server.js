@@ -4,8 +4,10 @@ const bodyParser = require("body-parser");
 const _ = require("lodash");
 const yfin = require("yahoo-finance");
 const axios = require('axios');
+const cors = require("cors");
 
 const app = express();
+app.use(cors());
 
 app.set('view engine', 'ejs');
 
@@ -17,10 +19,23 @@ mongoose.connect("mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algo
 const equitiesSchema = {
   ticker: String,
   startDate: String,
-  entryPrice: Number
+  entryPrice: Number,
+  shares: Number
 };
 
 const Equity = mongoose.model("Equity", equitiesSchema);
+
+function findEarliestDate(dates){
+    if(dates.length == 0) return null;
+    var earliestDate = dates[0];
+    for(var i = 1; i < dates.length ; i++){
+        var currentDate = dates[i];
+        if(currentDate < earliestDate){
+            earliestDate = currentDate;
+        }
+    }
+    return earliestDate;
+}
 
 async function getData(tickers, startDate) {
   const today = new Date().toJSON().slice(0, 10);
@@ -48,15 +63,15 @@ app.get("/getData", function(req, res) {
       var js = [];
       var tickers = [];
       var startDates = [];
+      var shares = [];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
+        shares.push(result.shares);
       });
 
-      oldestDate = startDates.sort((a, b) => {
-        return Date.parse(a) > Date.parse(b);
-      })[0];
-
+      var oldestDate = findEarliestDate(startDates);
+      
       getData(tickers, oldestDate).then((data) => {
         for (let ticker in data) {
             var adjClose = [];
@@ -67,12 +82,13 @@ app.get("/getData", function(req, res) {
               dates.push(JSON.stringify(data[ticker][i].date).slice(1, 11));
             }
 
-            var start = dates.indexOf(startDates[idx])
+            var start = dates.indexOf(startDates[idx]);
             adjClose = adjClose.slice(start);
             dates = dates.slice(start);
 
             js.push({
               ticker: ticker,
+              shares: shares[idx],
               data: adjClose,
               dates: dates
             });
@@ -85,10 +101,11 @@ app.get("/getData", function(req, res) {
   });
 });
 
-app.get('/:ticker&:startDate&:startPrice', function(req, res) {
+app.get('/:ticker&:startDate&:startPrice&:shares', function(req, res) {
   const ticker = req.params.ticker.toUpperCase();
   const startDate = req.params.startDate;
   const startPrice = req.params.startPrice;
+  const shares = req.params.shares;
   const today = new Date().toJSON().slice(0, 10);
 
   Equity.findOne({ticker: ticker}, function(err, foundList) {
@@ -101,7 +118,8 @@ app.get('/:ticker&:startDate&:startPrice', function(req, res) {
       var newPosition = new Equity({
         ticker: ticker,
         startDate: startDate,
-        entryPrice: startPrice
+        entryPrice: startPrice,
+        shares: shares
       });
 
       newPosition.save();
