@@ -60,7 +60,7 @@ app.get("/getData", function(req, res) {
       console.log(err);
       res.send(err);
     } else {
-      var js = [];
+      var js = {};
       var tickers = [];
       var startDates = [];
       var shares = [];
@@ -74,6 +74,8 @@ app.get("/getData", function(req, res) {
 
       var oldestDate = findEarliestDate(startDates);
 
+      var oldestTicker = tickers[startDates.indexOf(oldestDate)];
+
       getData(tickers, oldestDate).then((data) => {
         for (let ticker in data) {
             var adjClose = [];
@@ -86,16 +88,23 @@ app.get("/getData", function(req, res) {
 
             var start = dates.indexOf(startDates[idx]);
             adjClose = adjClose.slice(start);
-            dates = dates.slice(start);
 
-            js.push({
-              ticker: ticker,
+            js[ticker] = {
               shares: shares[idx],
               entryPrice: entryPrice[idx],
               data: adjClose,
               dates: dates
-            });
+            };
         }
+
+        for (var [ticker, value] of Object.entries(js)) {
+          if (ticker != oldestTicker) {
+            for (var i = value.data.length; i < js[oldestTicker].data.length; i++) {
+              value.data.unshift(null);
+            }
+          }
+        }
+
         res.send(js);
       }).catch((err) => {
         console.log(err);
