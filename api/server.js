@@ -117,6 +117,7 @@ app.get("/getData", function(req, res) {
             js[ticker] = {
               shares: shares[idx],
               entryPrice: entryPrice[idx],
+              entryDate: startDates[idx],
               data: adjClose,
               dates: dates
             };
