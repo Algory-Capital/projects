@@ -96,8 +96,10 @@ app.get("/getData", function(req, res) {
         shares.push(result.shares);
         entryPrice.push(result.entryPrice);
       });
+      tickers.push('SPY');
 
       var oldestDate = findEarliestDate(startDates);
+      startDates.push(oldestDate);
 
       var oldestTicker = tickers[startDates.indexOf(oldestDate)];
 
