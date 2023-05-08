@@ -1,0 +1,742 @@
+<!-- Dashboard and API fully developed by Anay Roge BBA '24
+     to access api, visit https://algoryapi.herokuapp.com/getData -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Algory Dashboard</title>
+
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Titillium+Web:400,600,700"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="assets/styles.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.2/fetch.min.js" integrity="sha512-1Gn7//DzfuF67BGkg97Oc6jPN6hqxuZXnaTpC9P5uw8C6W4yUNj5hoS/APga4g1nO2X6USBb/rXtGzADdaVDeA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js" integrity="sha512-DmQnZdEjFh4R/040JxDSg3j9cS8D0oC5u2noG9Az18F11leiDFwrTOkm9PP+jdBMiH66QBa73O+54kZr5FyU7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  </head>
+
+  <body>
+    <div id="preloader">
+      <div class="loader">
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+        <div class="loader-square"></div>
+      </div>
+      <div class="errorCard">
+        <div id="errormsg">Error in connecting to API. Click me to try refreshing or contact Anay to fix.</div>
+      </div>
+    </div>
+
+    <div id="wrapper">
+      <div class="content-area">
+        <div class="container-fluid">
+          <div class="main">
+            <div id="sparks" class="row sparkboxes mt-4 mb-4"></div>
+
+            <div class="row mb-4">
+              <div class="col-md-12">
+                <div class="boxDonut">
+                  <div id="donut"></div>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <div class="box">
+                  <div class="text-right">
+                    <label class="switch">
+                      <input id="aum-switch" type="checkbox">
+                      <span class="slider-aum"></span>
+                    </label>
+                  </div>
+                  <div id="aum"></div>
+                  <div id="aumDetails">
+                    <div id="chart-start" class="text-right">
+                      <label style="padding-right: 15px;"><strong>Enter a start date: </strong></label>
+                      <input type="text" id="start-input" name="start-date" class="start-input" placeholder="yyyy-mm-dd">
+                      <button id="start-input-submit" class="start-input-style">Go</button>
+                    </div>
+                  </div>
+                  <div id="aumDisclaimer" class="disclaimer">*Benchmarked Algory Portfolio YTD to SPY YTD</div>
+                </div>
+              </div>
+            </div>
+            <div class="text-right mt-3 mb-3 d-fixed">
+              <a
+                class="mr-2"
+              >
+                <span class="btn-text"></span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type='text/javascript'>
+      function calculateAverage(arr) {
+        return arr.filter(num => num !== null).reduce((a, b) => a + b, 0) / arr.filter(num => num !== null).length;
+      }
+      function calculateStdDev(arr) {
+        const filteredArr = arr.filter(num => num !== null);
+        const n = filteredArr.length;
+        const mean = filteredArr.reduce((acc, val) => acc + val, 0) / n;
+        const variance = filteredArr.reduce((acc, val) => acc + (val - mean) ** 2, 0) / n;
+        return Math.sqrt(variance * 252);
+      }
+
+      function calculateCovarianceMatrix(returns) {
+        const n = returns.length;
+        const means = new Array(n).fill(0);
+        const covarianceMatrix = new Array(n).fill(null).map(() => new Array(n).fill(null));
+
+        // calculate means
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < returns[i].length; j++) {
+            if (returns[i][j] !== null) {
+              means[i] += returns[i][j];
+            }
+          }
+          means[i] /= returns[i].filter(x => x !== null).length;
+        }
+
+        // calculate covariance matrix
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+            let cov = 0;
+            let len = 0;
+            for (let k = 0; k < returns[i].length; k++) {
+              if (returns[i][k] !== null && returns[j][k] !== null) {
+                cov += (returns[i][k] - means[i]) * (returns[j][k] - means[j]);
+                len++;
+              }
+            }
+            covarianceMatrix[i][j] = cov / (len - 1);
+          }
+        }
+
+        return covarianceMatrix;
+      }
+
+      function calculatePortfolioVolatility(returns, weights) {
+        // Remove null values from returns array
+        const filteredReturns = returns.filter((returnVal) => returnVal !== null);
+
+        // Calculate the covariance matrix
+        const covMatrix = calculateCovarianceMatrix(filteredReturns);
+
+        // Calculate the portfolio variance
+        const variance = math.multiply(weights, math.multiply(covMatrix, math.transpose(weights)));
+
+        // Calculate the portfolio volatility
+        const volatility = Math.sqrt(variance * 252);
+
+        return volatility;
+      }
+
+      fetch("https://algoryapi.herokuapp.com/getData").then(
+        result => result.json()).then(
+          (output) => {
+            // Loader
+            var loader = document.getElementById("preloader");
+            loader.style.display = "none";
+
+            var entryPrices = [];
+            var curPrices = [];
+            var shares = [];
+            var tickers = [];
+            var assetWorth = [];
+            var aum = output["AUM"].aum;
+            var aumDates = output["AUM"].dates;
+            for (var [ticker, position] of Object.entries(output)) {
+              if (ticker != "AUM" && ticker != "SPY"){
+                tickers.push(ticker);
+                entryPrices.push(position.entryPrice);
+                curPrices.push(position.data[position.data.length - 1]);
+                shares.push(position.shares);
+                assetWorth.push(Number.parseFloat(position.shares * position.data.at(-1).toFixed(2)));
+              }
+            }
+
+            // Insert when the data was last updated
+            $(".btn-text").append(`<em>Updated with market data of ${new Date(aumDates.at(-1)+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", weekday: "long", year: "numeric", timeZone: "America/New_York"})}</em>`);
+
+            // init apex charts
+            Apex.grid = {
+              padding: {
+                right: 0,
+                left: 0
+              }
+            }
+
+            Apex.dataLabels = {
+              enabled: false
+            }
+
+            // the default colorPalette for this dashboard
+            var colorPalette = ['#82ffd0', '#44e7cf', '#00cfcd', '#00b6c9', '#009dc2', '#0084b8', '#006ba9', '#005296', '#00397e', '#042063'];
+
+            // Hardcoded jquery sizes for spark sharts
+            var boxPos = [[12], [6, 6], [6, 6, 12], [6, 6, 6, 6], [6, 6, 6, 6, 12], [6, 6, 6, 6, 6, 6], [6, 6, 6, 6, 6, 6, 12], [6, 6, 6, 6, 6, 6, 6, 6]];
+
+            for (var i = 1; i <= tickers.length; i++) {
+              if (output[tickers[i-1]].data.at(-1) > output[tickers[i-1]].entryPrice) {
+                var chartColor = '#27A69A'
+              } else {
+                var chartColor = '#a62727'
+              }
+              let data = output[tickers[i-1]].data;
+              let dates = output[tickers[i-1]].dates;
+              var sparkOpt = {
+                series: [
+                  {
+                    name: tickers[i-1],
+                    data: data.map(function(element){
+                          if (element != null) {
+                            return Number(element.toFixed(2));
+                          } else {
+                            return element
+                          }
+                      })
+                  }
+                ],
+                chart: {
+                  height: 250,
+                  type: "area",
+                  group: "detail",
+                  id: "areachart-1"
+                },
+                colors: [chartColor],
+                dataLabels: {
+                  enabled: false
+                },
+                stroke: {
+                  curve: "straight"
+                },
+                grid: {
+                  padding: {
+                    right: 20,
+                    left: 20
+                  },
+                  xaxis: {
+                    lines: {
+                      show: false
+                    }
+                  }
+                },
+                title: {
+                  text: tickers[i-1],
+                  align: "left",
+                  style: {
+                    fontSize: '21px'
+                  }
+                },
+                labels: dates,
+                xaxis: {
+                  type: "datetime"
+                },
+                yaxis: {
+                  forceNiceScale: true,
+                  decimalsInFloat: 2,
+                },
+                responsive: [{
+                  breakpoint: 600,
+                  options: {
+                    title: {
+                      style: {
+                        fontSize: '18px'
+                      }
+                    },
+                    grid: {
+                      padding: {
+                        right: 10
+                      }
+                    },
+                    series: [{
+                        data: data.filter(Number)
+                    }],
+                    labels: dates.slice(dates.length - data.filter(Number).length, dates.length)
+                  }
+                }]
+              };
+
+              // calculate position details
+              let pnl = ((output[tickers[i-1]].data.at(-1) - output[tickers[i-1]].entryPrice) / output[tickers[i-1]].entryPrice * 100).toFixed(2)
+              let spEntry = output['SPY'].data.at(output['SPY'].dates.indexOf(output[tickers[i-1]].entryDate));
+              let formatEntry = new Date(output[tickers[i-1]].entryDate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
+
+              // dynamically insert position details
+              $("#sparks").append(
+                $("<div>").prop({
+                  className: `col-md-${boxPos[tickers.length-1][i-1]}`,
+                }).append(
+                  $("<div>").prop({
+                    className: "box"
+                  }).append([
+                    $("<div>").prop({
+                      className: "row md-4"
+                    }).append([
+                      $("<div>").prop({
+                        className: "col-lg-6 col-md-12"
+                      }).append(
+                        $("<div>").prop({
+                          id: `spark${i}`,
+                          className: `sparkPos`
+                        })
+                      )
+                    ,
+                      $("<div>").prop({
+                        className: "col-lg-6 col-md-12"
+                      }).append(
+                        $("<div>").prop({
+                          className: "details"
+                        }).append(
+                          [$("<div>").prop({
+                            className: "title"
+                          }).append("POSITION DETAILS"),
+                          $("<div>").prop({
+                            className: "body"
+                          }).append([
+                            `<p><strong>Entry Date: </strong> ${formatEntry}</p>`,
+                            `<p><strong>Entry Price: </strong> ${output[tickers[i-1]].entryPrice}</p>`,
+                            `<p><strong>Shares: </strong> ${output[tickers[i-1]].shares}</p>`,
+                            `<p><strong>Daily: </strong> ${((output[tickers[i-1]].data.at(-1) - output[tickers[i-1]].data.at(-2)) / output[tickers[i-1]].data.at(-2) * 100).toFixed(2)}%</p>`,
+                            `<p><strong>P/L: </strong> ${pnl}%</p>`,
+                            `<p><strong>vs S&P*:   </strong> ${(pnl - ((output['SPY'].data.at(-1) - spEntry) / spEntry * 100)).toFixed(2)}%</p>`,
+                            ])
+                          ]
+                        )
+                      )]
+                    ),
+                    $("<div>").prop({
+                      className: 'disclaimer'
+                    }).append('*Benchmarked against S&P throughout the holding period')
+                  ])
+                )
+              );
+              var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
+              sparkPosition.render();
+            }
+
+
+            // moving on to AUM
+            assetWorth.push(Number.parseFloat((aum.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2)));
+            tickers.push("Cash");
+
+            let curYear = aumDates.at(-1).slice(0, 4);
+            let { aumYTD, aumVsSPY } = updateAUM(curYear + "-01-02", false);
+
+            var weights = [];
+            var avgRet = [];
+            var avgVol = [];
+            
+            assetWorth.forEach((val) => {
+              weights.push(val / aum.at(-1));
+            });
+
+            var weightsSum = 0;
+            var ret = [];
+
+            for (var [ticker, position] of Object.entries(output)) {
+              if (ticker != "AUM" && ticker != "SPY"){
+                let percRet = [];
+                let data = output[ticker].data;
+                for (let i = 1; i < data.length; i++) {
+                  if (data[i] != null && data[i-1] != null) {
+                    percRet.push((data[i] - data[i-1]) / data[i]);
+                  } else {
+                    percRet.push(data[i-1]);
+                  }
+                }
+                ret.push(percRet);
+                avgRet.push(calculateAverage(percRet) * 252);
+                avgVol.push(calculateStdDev(percRet));
+                weightsSum = weightsSum + weights.at(tickers.indexOf(ticker));
+              }
+              // FOR SPY CALCULATION
+              // if (ticker == "SPY") {
+              //   let percRet = [];
+              //   let data = output[ticker].data;
+              //   for (let i = 1; i < data.length; i++) {
+              //     percRet.push((data[i] - data[i-1]) / data[i]);
+              //   }
+              //   var spVol = calculateStdDev(percRet);
+              //   var spAvg = calculateAverage(percRet) * 252;
+              // }
+            }
+
+            var newWeights = [];
+            for (let i = 0; i < weights.length - 1; i++) {
+              newWeights.push(weights[i] / weightsSum);
+            }
+
+            var weightedVol = 0;
+            var weightedAvg = 0;
+            for (let i = 0; i < weights.length - 1; i++) {
+              weightedVol += weights[i] * avgVol[i]; //not necessary
+              weightedAvg += weights[i] * (avgRet[i] - 0.0348);
+            }
+
+            const vol = calculatePortfolioVolatility(ret, newWeights);
+            const sr = weightedAvg / vol;
+
+            var aumOpt = {
+              series: [
+                {
+                  name: "AUM",
+                  data: aum
+                }
+              ],
+              chart: {
+                height: 300,
+                type: "area",
+                group: "detail",
+                id: "aum-chart",
+              },
+              colors: ['#1125bf'],
+              dataLabels: {
+                enabled: false
+              },
+              stroke: {
+                curve: "smooth",
+                lineCap: "round"
+              },
+              grid: {
+                padding: {
+                  right: 20,
+                  left: 20
+                },
+                xaxis: {
+                  lines: {
+                    show: false
+                  }
+                }
+              },
+              title: {
+                text: "Assets Under Management",
+                style: {
+                  fontSize: '21px'
+                },
+                align: "left"
+              },
+              labels: aumDates,
+              xaxis: {
+                type: "datetime"
+              },
+              yaxis: {
+                forceNiceScale: true,
+                decimalsInFloat: 0,
+                labels: {
+                  formatter: function(val, index) {
+                    return `$${val.toLocaleString('en-US')}`;
+                  }
+                },
+              },
+              responsive: [{
+                breakpoint: 600,
+                options: {
+                  title: {
+                    text: "AUM",
+                    style: {
+                      fontSize: '18px'
+                    }
+                  },
+                  grid: {
+                    padding: {
+                      right: 10
+                    }
+                  }
+                }
+              }]
+            };
+
+            $("#aumDetails").append(
+              $('<div>').prop({
+                className: 'details'
+              }).append([
+                $('<div>').prop({
+                  className: "title"  
+                }).append('PORTFOLIO DETAILS'),
+                $('<div>').prop({
+                  className: "body"
+                }).append([
+                  `<p><strong>Year to Date: </strong> ${aumYTD}%</p>`,
+                  `<p><strong>Daily: </strong> ${((aum.at(-1) - aum.at(-2)) / aum.at(-2) * 100).toFixed(2)}%</p>`,
+                  `<p id="aumVsSPY"><strong>vs S&P*: </strong> ${aumVsSPY}%</p>`,
+                  `<p"><strong>Sharpe Ratio: </strong> ${sr.toFixed(3)}</p>`
+                ])
+              ])
+            );
+
+
+            var aumChart = new ApexCharts(document.querySelector('#aum'), aumOpt);
+            aumChart.render();
+
+
+            // moving on to donut chart
+
+            var donutOpt = {
+              chart: {
+                  type: 'donut',
+                  width: '100%',
+                  height: 300
+              },
+              dataLabels: {
+                enabled: true,
+                textAnchor: 'end',
+                style: {
+                  fontSize: '18px'
+                }
+              },
+              tooltip: {
+                enabled: true,
+                custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+                  let total = 0;
+                  for (let x of series) {
+                    total += x;
+                  }
+                  let selected = series[seriesIndex];
+                  return  `<div style='color:white;padding:10px;background-color:${colorPalette.slice(colorPalette.length - tickers.length)[seriesIndex]}; ' > ${w.config.labels[seriesIndex]} : $${selected.toLocaleString()} </div>`
+                }
+              },
+              plotOptions: {
+                pie: {
+                  expandOnClick: true,
+                  donut: {
+                    size: '50px',
+                    background: 'transparent',
+                    labels: {
+                      show: true,
+                      value: {
+                        show: true,
+                        formatter: function (val) {
+                          return `$${Number.parseFloat(val).toLocaleString()}`;
+                        }
+                      },
+                      total: {
+                        show: true,
+                        label: "Total",
+                        formatter: function (w) {
+                          return `$${w.globals.seriesTotals.reduce((a,b)=>a+b).toLocaleString('en-US')}`;
+                        }
+                      }
+                    }
+                  },
+                  offsetY: 20,
+                },
+                stroke: {
+                  colors: undefined
+                }
+              },
+              colors: colorPalette.slice(colorPalette.length - tickers.length),
+              title: {
+                text: 'Portfolio Holdings',
+                style: {
+                  fontSize: '21px'
+                }
+              },
+              series: assetWorth,
+              labels: tickers,
+              legend: {
+                position: 'left',
+                fontSize: '18px',
+                offsetY: 80,
+                offsetX: 80,
+                itemMargin: {
+                    horizontal: 0,
+                    vertical: 7
+                },
+                onItemClick: {
+                    toggleDataSeries: true
+                },
+                onItemHover: {
+                    highlightDataSeries: true
+                }
+              },
+              //Max-width: 500
+              responsive: [{
+                breakpoint: 600,
+                options: {
+                  dataLabels: {
+                    style: {
+                      fontSize: '10px'
+                    }
+                  },
+                  plotOptions: {
+                    pie: {
+                      offsetY: 20,
+                      donut: {
+                        size: '60px',
+                        labels: {
+                          value: {
+                            fontSize: '14px'
+                          }
+                        }
+                      }
+                    }
+                  },
+                  title: {
+                    align: 'center',
+                    style: {
+                      fontSize: '18px'
+                    }
+                  },
+                  legend: {
+                    position: 'bottom',
+                    fontSize: '15px',
+                    offsetY: 0,
+                    offsetX: 0,
+                    itemMargin: {
+                        horizontal: 5,
+                        vertical: 0
+                    }
+                  },
+                }
+              }]
+            }
+
+            new ApexCharts(document.querySelector("#donut"), donutOpt).render();
+            window.dispatchEvent(new Event('resize'));
+
+
+            var aumSwitch = $("#aum-switch")[0];
+            aumSwitch.addEventListener('change', e => {
+              if (e.target.checked === true) {
+                ApexCharts.exec('aum-chart');
+
+                $("#chart-start")[0].style.display = "block";
+
+                YTDvsSPY = updateAUM(curYear + "-01-02", true);
+              }
+
+              if (e.target.checked === false) {
+                ApexCharts.exec('aum-chart');
+
+                $("#chart-start")[0].style.display = "none";
+                $("#aumVsSPY").html(`<p id="aumVsSPY"><strong>vs S&P*: </strong> ${YTDvsSPY}%</p>`);
+                $("#aumDisclaimer").html("*Benchmarked Algory Portfolio YTD to SPY YTD")
+
+                aumChart.updateSeries([{
+                  name: "AUM",
+                  data: aum
+                }]);
+                aumChart.updateOptions({
+                  yaxis: {
+                    forceNiceScale: true,
+                    decimalsInFloat: 0,
+                    labels: {
+                      formatter: function(val, index) {
+                        return `$${val.toLocaleString('en-US')}`;
+                      }
+                    }
+                  },
+                  labels: aumDates,
+                  colors: ['#1125bf']
+                });
+              }
+            });
+
+            function calcClosestDate(date) {
+              let dateArr = [];
+              let fDate = new Date(date).getTime();
+              for (let i = 0; i < aumDates.length; i++) {
+                dateArr.push(new Date(aumDates[i]).getTime())
+              }
+
+              var closest = dateArr.reduce(function(prev, curr) {
+                return (Math.abs(curr - fDate) < Math.abs(prev - fDate) ? curr : prev);
+              })
+              return new Date(closest).toISOString().split("T")[0];
+            }
+
+            // update start date of AUM vs SPY
+            function updateAUM(startDate, updateChart) {
+              //calculate the percentage change from the start date
+              startDate = calcClosestDate(startDate);
+              idx = aumDates.indexOf(startDate);
+              aumYTDPerData = [];
+              spyYTDPerData = [];
+              aumNewDates = aumDates.slice(idx);
+
+              for (let i = idx; i < aumDates.length; i++) {
+                aumYTDPerData.push(Number(((aum[i] - aum.at(idx)) / aum.at(idx) * 100).toFixed(3)));
+                spyYTDPerData.push(Number(((output["SPY"].data[i] - output["SPY"].data[idx]) / output["SPY"].data[idx] * 100).toFixed(3)));
+              }
+
+              let aumYTD = aumYTDPerData.at(-1).toFixed(2);
+              let aumVsSPY = (aumYTDPerData.at(-1) - spyYTDPerData.at(-1)).toFixed(2);
+
+              if (updateChart) {
+                ApexCharts.exec('aum-chart');
+                aumChart.updateSeries([{
+                  name: "AUM",
+                  data: aumYTDPerData
+                },
+                {
+                  name: "SPY",
+                  data: spyYTDPerData
+                }]);
+                aumChart.updateOptions({
+                  yaxis: {
+                    forceNiceScale: false,
+                    decimalsInFloat: 2,
+                    labels: {
+                      formatter: function(val, index) {
+                        return `${val}%`;
+                      }
+                    }
+                  },
+                  labels: aumNewDates,
+                  colors: ['#1125bf', '#fcca53']
+                })
+                return aumVsSPY
+              } else {
+                return { aumYTD, aumVsSPY };
+              }
+            }
+
+            $("#start-input")[0].addEventListener('keypress', e => {
+              if (e.key === 'Enter') {
+                date = $("#start-input")[0].value
+                newSPYComp = updateAUM(date, true);
+                $("#aumVsSPY").html(`<p id="aumVsSPY"><strong>vs S&P*: </strong> ${newSPYComp}%</p>`);
+                $("#aumDisclaimer").html(`*Benchmarked Algory Portfolio to SPY starting from ${date}`);
+              }
+            })
+            $("#start-input-submit")[0].addEventListener('click', e => {
+              date = $("#start-input")[0].value
+              newSPYComp = updateAUM(date, true);
+              $("#aumVsSPY").html(`<p id="aumVsSPY"><strong>vs S&P*: </strong> ${newSPYComp}%</p>`);
+              $("#aumDisclaimer").html(`*Benchmarked Algory Portfolio to SPY starting from ${date}`);
+            })
+
+          }
+        ).catch((err) => {
+          $(".errorCard").css("display", "flex");
+          $(".errorCard")[0].addEventListener('click', e => {
+            location.reload();
+          });
+        })
+
+
+    </script>
+  </body>
+</html>
