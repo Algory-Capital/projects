@@ -6,6 +6,9 @@ const yfin = require("yahoo-finance");
 const axios = require('axios');
 const cors = require("cors");
 const e = require("express");
+const fetch = require("node-fetch");
+// const yfin2 = require("yahoo-finance2");
+require('dotenv').config()
 
 const app = express();
 app.use(cors());
@@ -17,11 +20,20 @@ app.use(express.static("public"));
 
 mongoose.connect("mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algoryPortDB");
 
+const divSchema = {
+  lastUpdate: String,
+  payoutRatio: Number,
+  payout: Number,
+  frequency: Number
+}
+
 const equitiesSchema = {
   ticker: String,
   startDate: String,
   entryPrice: Number,
-  shares: Number
+  shares: Number,
+  divInfo: divSchema,
+  assetClass: String
 };
 
 const Equity = mongoose.model("Equity", equitiesSchema);
@@ -34,6 +46,47 @@ const aumDataSchema = {
 
 const AUMData = mongoose.model("AUMData", aumDataSchema);
 
+const apikey = process.env.API_KEY;
+const fetchURL = "https://api.polygon.io/v3/reference/dividends?apiKey=" + apikey + "&ticker=";
+
+async function getDivUpdate(ticker, value, spy) {
+  // console.log(ticker);
+  var addToAUM = 0;
+  fetch(fetchURL + ticker).then(
+    result => result.json()
+  ).then(
+    async (output) => {
+      if (output.results != undefined && output.results.length > 0) {
+        // console.log(ticker, value)
+        for (const divEntry of output.results) {
+          // console.log(`${ticker} last update: ${value.divInfo.lastUpdate} ? ${divEntry.ex_dividend_date}`)
+          if (divEntry.ex_dividend_date > spy.dates.at(-1)) {
+            continue;
+          } else if (divEntry.ex_dividend_date == value.divInfo.lastUpdate) {
+            break;
+          } else if (value.divInfo.lastUpdate < divEntry.ex_dividend_date) {
+            // calculate div payout
+            addToAUM += divEntry.cash_amount * value.shares;
+            // set divInfo to this ex_dividend_date
+            const doc = await Equity.findOneAndUpdate({ticker: ticker}, {divInfo: {
+              lastUpdate: divEntry.ex_dividend_date,
+              payoutRatio: divEntry.cash_amount,
+              payout: addToAUM,
+              frequency: divEntry.frequency
+            }});
+
+            break;
+          }
+        }
+      }
+      console.log(addToAUM);
+      return addToAUM;
+    }
+  )
+}
+
+
+
 async function updateAUM(startDate, spy, js, cash) {
   var aum = [];
   for (let i = spy.dates.indexOf(startDate); i < spy.dates.length; i++) {
@@ -45,15 +98,22 @@ async function updateAUM(startDate, spy, js, cash) {
           cash -= (value.entryPrice * value.shares);
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
-          addToAUM += (value.data[i] * value.shares + 8.8);
+          // Check for dividends
+          // if (value.divInfo?.lastUpdate != undefined) {
+          //   addToAUM += await getDivUpdate(ticker, value, spy);
+          //   console.log(addToAUM);
+          // }
+          addToAUM += (value.data[i] * value.shares);
         }
       }
     }
-    cash = Number((cash * 1.000098847).toFixed(2));
+    // cash = Number((cash * 1.000098847).toFixed(2));
     if (addToAUM != null) {
+      // console.log(`Adding to AUM on ${curDate}: ${addToAUM}`);
       aum.push(Number(addToAUM.toFixed(2)));
     }
   }
+
   return { aum, cash };
 }
 
@@ -99,11 +159,15 @@ app.get("/getData", function(req, res) {
       var aumDates = [];
       var shares = [];
       var entryPrice = [];
+      var divInfo = [];
+      var assetClass = [];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
         shares.push(result.shares);
         entryPrice.push(result.entryPrice);
+        divInfo.push(result.divInfo);
+        assetClass.push(result.assetClass);
       });
       tickers.push('SPY');
 
@@ -132,7 +196,9 @@ app.get("/getData", function(req, res) {
               entryPrice: entryPrice[idx],
               entryDate: startDates[idx],
               data: adjClose,
-              dates: dates
+              dates: dates,
+              divInfo: divInfo[idx],
+              assetClass: assetClass[idx]
             };
         }
 
@@ -178,6 +244,14 @@ app.get("/getData", function(req, res) {
               var aum = aumResults[0];
               if (aum.dates.at(-1) < spy.dates.at(-1)) {
                 let updateStartDate = spy.dates.at(spy.dates.indexOf(aum.dates.at(-1)) + 1);
+
+                // var assetWorth = [];
+                // for (var [ticker, value] of Object.entries(js)) {
+                //   if (ticker != 'SPY'){
+                //     assetWorth.push(Number.parseFloat(value.shares * value.data.at(-1).toFixed(2)));
+                //   }
+                // }
+                // cash = Number.parseFloat((aum.data.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2));
                 updateAUM(updateStartDate, spy, js, aum.cash).then((result) => {
                   let newDates = spy.dates.slice(spy.dates.indexOf(aum.dates.at(-1)) + 1);
                   AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {
@@ -190,10 +264,6 @@ app.get("/getData", function(req, res) {
                     if (err) {
                       console.log(err);
                     }
-                    // AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {cash: result.cash}, (err, testResult) => {
-                    //   if (err) {
-                    //     console.log(err);
-                    //   }
                       AUMData.findOne({_id: aum._id.toHexString()}, (err, testResult) => {
                         js["AUM"] = {
                           cash: testResult.cash,
@@ -202,7 +272,6 @@ app.get("/getData", function(req, res) {
                         }
                         res.send(js);
                       })
-                    // });
                   })
                 })
               } else {
@@ -249,12 +318,34 @@ app.get("/getData", function(req, res) {
   });
 });
 
-app.get('/:ticker&:startDate&:startPrice&:shares', function(req, res) {
+app.get('/:ticker&:startDate&:startPrice&:shares&:asset', async function(req, res) {
   const ticker = req.params.ticker.toUpperCase();
   const startDate = req.params.startDate;
   const startPrice = req.params.startPrice;
   const shares = req.params.shares;
+  const assetClass = req.params.asset;
   const today = new Date().toJSON().slice(0, 10);
+  var dividend;
+
+  await fetch(fetchURL + ticker).then(
+    result => result.json()
+  ).then(
+    (output) => {
+      for (const divEntry of output.results) {
+        if (divEntry.ex_dividend_date > today) {
+          continue;
+        } else {
+          dividend = {
+            lastUpdate: divEntry.ex_dividend_date,
+            payoutRatio: divEntry.cash_amount,
+            payout: null,
+            frequency: divEntry.frequency
+          }
+          break;
+        }
+      }
+    }
+  )
 
   Equity.findOne({ticker: ticker}, function(err, foundList) {
     if (err) {
@@ -267,7 +358,9 @@ app.get('/:ticker&:startDate&:startPrice&:shares', function(req, res) {
         ticker: ticker,
         startDate: startDate,
         entryPrice: startPrice,
-        shares: shares
+        shares: shares,
+        divInfo: dividend,
+        assetClass: assetClass
       });
 
       newPosition.save();
