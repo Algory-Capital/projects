@@ -1,5 +1,5 @@
 # AlgoryCapital
-Repository for models built by Algory Capital Quantitative Investments team test
+Repository for models built by Algory Capital Quantitative Investments team
 
 ## Using the api
 To add a position, go to www.algoryapi.herokuapp.com/TICKER_NAME&START_DATE&ENTRY_PRICE&NUM_SHARES
