@@ -1,6 +1,9 @@
 # Misc
 .DS_Store
 
+# VS Code
+**/*.code-workspace
+
 # Logs
 logs
 # PyCharm .idea
