@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import math
 import plotly.graph_objects as go
+import yfinance as yfin
+yfin.pdr_override()
 
 # choose a portfolio of 3 tickers
 tickers = ['AAPL', 'BRK-B', 'XLE']
