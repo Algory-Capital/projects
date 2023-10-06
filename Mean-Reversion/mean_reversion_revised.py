@@ -169,7 +169,7 @@ plt.legend(["Z Score", "Mean", 1, 1.25, -1, -1.25])
 plt.title(f"Z Score of 20 & 5 Days Moving Average of {Criterion}")
 plt.show()
 
-# Draw the Siganols
+# Draw the Signals
 buy = stock_data.query("zscore_20_5< -1")
 sell = stock_data.query("zscore_20_5 > 1")
 
