@@ -1,6 +1,12 @@
+import time
+import yfinance as yf
+
 settings = {
-    "COMMISSION": 20,
-    "COMMISSION_percent": 0.1,
+    "C_FLAT": 20,
+    "C_PERCENT": 0.1,
+    "C_TYPE": "FLAT",
+    # "C_TYPE": "PERCENT",
+    # "C_TYPE": "NONE",
     "INITIAL_CAPITAL": 100000
 }
 
@@ -21,14 +27,36 @@ class Trade:
         self.timestamp = timestamp
         self.type = type
 
+def calculate_commission(trade):
+    if settings.get("C_TYPE") == "PERCENT":
+        return trade.price * trade.quantity * settings["C_PERCENT"]
+    elif settings.get("C_TYPE") == "FLAT":
+        return settings["C_FLAT"]
+    elif settings.get("C_TYPE") == "NONE":
+        return 0
+    else:
+        raise TypeError("No valid commision")
+    
+def portfolio_value():
+    total_value = current_capital
+    for symbol, position in positions.items():
+        stock = yf.Ticker(symbol)
+        current_price = stock.history(period="1d")["Close"].iloc[-1]
+        
+        # Calculate the current value of the position
+        position_value = position['quantity'] * current_price
+        total_value += position_value
+    return total_value
+
+
 def buy_stock(symbol, quantity, price, timestamp):
     global current_capital  # Declare global to update the outer variable
-    if current_capital >= (quantity * price + settings["COMMISSION"]):
-        new_trade = Trade(len(trades_made), symbol=symbol, quantity=quantity, price=price, timestamp=timestamp, type="buy")
+    new_trade = Trade(len(trades_made), symbol=symbol, quantity=quantity, price=price, timestamp=timestamp, type="buy")
+    if current_capital >= (quantity * price + calculate_commission(new_trade)):
         trades_made.append(new_trade)
 
         # Calculate the total cost of the purchase, including commission
-        total_cost = (quantity * price) + settings["COMMISSION"]
+        total_cost = (quantity * price) + calculate_commission(new_trade)
         
         if symbol in positions:
             positions[symbol]['quantity'] += quantity
@@ -38,36 +66,41 @@ def buy_stock(symbol, quantity, price, timestamp):
         
         # Update current capital
         current_capital -= total_cost
+
     else:
         print("Not enough capital to buy", quantity, "shares of", symbol)
     print("BUY:  %d %s AT %d" % (quantity, symbol, price))
 
-def sell_stock(trade: Trade, quantity):
+def sell_stock(symbol, quantity, price, timestamp):
+    new_trade = Trade(len(trades_made), symbol=symbol, quantity=quantity, price=price, timestamp=timestamp, type="sell")
     global current_capital  # Declare global to update the outer variable
-    if trade.symbol in positions and positions[trade.symbol]['quantity'] >= quantity:
-        trade.type = "sell"
-        trades_made.append(trade)
+
+    if new_trade.symbol in positions and positions[new_trade.symbol]['quantity'] >= quantity:
         
         # Calculate the total revenue from the sale, after deducting commission
-        total_revenue = (quantity * trade.price) - settings["COMMISSION"]
+        total_revenue = (quantity * new_trade.price) - calculate_commission(new_trade)
         
         # Update position
-        positions[trade.symbol]['quantity'] -= quantity
+        positions[new_trade.symbol]['quantity'] -= quantity
         
         # Check if all shares are sold for this position
-        if positions[trade.symbol]['quantity'] == 0:
-            del positions[trade.symbol]
+        if positions[new_trade.symbol]['quantity'] == 0:
+            del positions[new_trade.symbol]
         
         # Update current capital
         current_capital += total_revenue
+ 
     else:
-        print("Not enough shares to sell or invalid trade.", trade)
-    print("SOLD: %d %s AT %d" % (quantity, trade.symbol, trade.price))
+        print("Not enough shares to sell or invalid trade.", new_trade)
+    print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
+
 
 
 # Example usage
 if __name__ == '__main__':
-    buy_stock('AAPL', 10, 150.0, '2023-10-07')
-    sell_stock(trades_made[0], 5)
+    buy_stock('AAPL', 10, 150, time.time())
+    buy_stock('MSFT', 10, 300, time.time())
+    sell_stock('AAPL', 5, 150, time.time())
     print("Current Capital:", current_capital)
+    print("Current Portfolio Value:", portfolio_value())
     print("Positions:", positions)
