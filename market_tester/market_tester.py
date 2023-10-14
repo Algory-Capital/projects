@@ -1,13 +1,14 @@
 import time
 import yfinance as yf
-
+import csv
+from datetime import datetime
 
 settings = {
     "C_FLAT": 20,
     "C_PERCENT": 0.1,
-    "C_TYPE": "FLAT",
+    # "C_TYPE": "FLAT",
     # "C_TYPE": "PERCENT",
-    # "C_TYPE": "NONE",
+    "C_TYPE": "NONE",
     "INITIAL_CAPITAL": 100000
 }
 
@@ -70,7 +71,7 @@ def buy_stock(symbol, quantity, price, timestamp):
 
     else:
         print("Not enough capital to buy", quantity, "shares of", symbol)
-    print("BUY:  %d %s AT %d" % (quantity, symbol, price))
+    # print("BUY:  %d %s AT %.2f" % (quantity, symbol, price))
 
 def sell_stock(symbol, quantity, price, timestamp):
     new_trade = Trade(len(trades_made), symbol=symbol, quantity=quantity, price=price, timestamp=timestamp, type="sell")
@@ -93,10 +94,10 @@ def sell_stock(symbol, quantity, price, timestamp):
  
     else:
         print("Not enough shares to sell or invalid trade.", new_trade)
-    print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
+    # print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
 
 #STRUCTURE SHOULD BE [[BUY, symbol, quantity, timestamp], [SELL, symbol, quantity, timestamp]]
-#timestamp currently in UNIX time system
+#timestamp currently in Y-M-D 00:00:00 time system
 def run_strategy(instructions: list[list]):
     for order in instructions:
         order_type = order[0]
@@ -104,9 +105,24 @@ def run_strategy(instructions: list[list]):
         quantity = order[2]
         timestamp = order[3]
         stock = yf.Ticker(symbol)
+        price = 0
 
-        # price = stock.info['currentPrice']
+        with open('s&p500_20y.csv', 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            column_headers = next(reader)
+            ticker_index = column_headers.index(symbol)
 
+            # Search for the row with the target date
+
+            for row in reader:
+                if row[0] == timestamp:
+                    # Access the value in the specified row and column
+                    target_value = row[ticker_index]
+                    print(f"{order_type: <4} {symbol: <4} on {timestamp}: {float(target_value):.2f}")
+                    price = float(target_value)
+                    break 
+            if price == 0:
+                print(f"{symbol} not in database on {timestamp}")
 
         if order_type == 'BUY':
             buy_stock(symbol, quantity, price, timestamp)
@@ -115,14 +131,11 @@ def run_strategy(instructions: list[list]):
         else:
             print(f'Invalid order{order}')
 
+#does not account for stock splits
 
-
-
-# Example usage
 if __name__ == '__main__':
-    #get price from yfinance in methods
 
-    instructions = [['BUY', 'AAPL', 20, time.time()], ['BUY', 'MSFT', 10, time.time()], ['SELL', 'AAPL', 15, time.time()]]
+    instructions = [['BUY', 'AAPL', 20, "2002-01-02 00:00:00"], ['BUY', 'ABT', 10, "2002-01-02 00:00:00"], ['SELL', 'AAPL', 20, "2020-01-02 00:00:00"], ['SELL', 'ABT', 10, "2003-01-02 00:00:00"]]
 
     run_strategy(instructions)
     print("Current Capital:", current_capital)
