@@ -105,7 +105,7 @@ def run_strategy(instructions: list[list]):
         timestamp = order[3]
         stock = yf.Ticker(symbol)
 
-        price = stock.info['currentPrice']
+        # price = stock.info['currentPrice']
 
 
         if order_type == 'BUY':
