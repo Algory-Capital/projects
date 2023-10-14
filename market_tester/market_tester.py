@@ -1,6 +1,7 @@
 import time
 import yfinance as yf
 
+
 settings = {
     "C_FLAT": 20,
     "C_PERCENT": 0.1,
@@ -94,13 +95,36 @@ def sell_stock(symbol, quantity, price, timestamp):
         print("Not enough shares to sell or invalid trade.", new_trade)
     print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
 
+#STRUCTURE SHOULD BE [[BUY, symbol, quantity, timestamp], [SELL, symbol, quantity, timestamp]]
+#timestamp currently in UNIX time system
+def run_strategy(instructions: list[list]):
+    for order in instructions:
+        order_type = order[0]
+        symbol = order[1]
+        quantity = order[2]
+        timestamp = order[3]
+        stock = yf.Ticker(symbol)
+
+        price = stock.info['currentPrice']
+
+
+        if order_type == 'BUY':
+            buy_stock(symbol, quantity, price, timestamp)
+        elif order_type == 'SELL':
+            sell_stock(symbol, quantity, price, timestamp)
+        else:
+            print(f'Invalid order{order}')
+
+
 
 
 # Example usage
 if __name__ == '__main__':
-    buy_stock('AAPL', 10, 150, time.time())
-    buy_stock('MSFT', 10, 300, time.time())
-    sell_stock('AAPL', 5, 150, time.time())
+    #get price from yfinance in methods
+
+    instructions = [['BUY', 'AAPL', 20, time.time()], ['BUY', 'MSFT', 10, time.time()], ['SELL', 'AAPL', 15, time.time()]]
+
+    run_strategy(instructions)
     print("Current Capital:", current_capital)
     print("Current Portfolio Value:", portfolio_value())
     print("Positions:", positions)
