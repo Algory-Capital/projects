@@ -2,6 +2,7 @@ import time
 import yfinance as yf
 import csv
 from datetime import datetime
+import data_download
 
 settings = {
     "C_FLAT": 20,
@@ -39,6 +40,7 @@ def calculate_commission(trade):
     else:
         raise TypeError("No valid commision")
     
+#calculates value for positions TO NOW
 def portfolio_value():
     total_value = current_capital
     for symbol, position in positions.items():
@@ -66,7 +68,6 @@ def buy_stock(symbol, quantity, price, timestamp):
         else:
             positions[symbol] = {'quantity': quantity, 'avg_price': price}
         
-        # Update current capital
         current_capital -= total_cost
 
     else:
@@ -104,19 +105,17 @@ def run_strategy(instructions: list[list]):
         symbol = order[1]
         quantity = order[2]
         timestamp = order[3]
-        stock = yf.Ticker(symbol)
+        # stock = yf.Ticker(symbol)
+        # price = stock.info("currentPrice")
         price = 0
 
-        with open('s&p500_20y.csv', 'r') as csvfile:
+        with open(database_name, 'r') as csvfile:
             reader = csv.reader(csvfile)
             column_headers = next(reader)
             ticker_index = column_headers.index(symbol)
 
-            # Search for the row with the target date
-
             for row in reader:
                 if row[0] == timestamp:
-                    # Access the value in the specified row and column
                     target_value = row[ticker_index]
                     print(f"{order_type: <4} {symbol: <4} on {timestamp}: {float(target_value):.2f}")
                     price = float(target_value)
@@ -132,12 +131,17 @@ def run_strategy(instructions: list[list]):
             print(f'Invalid order{order}')
 
 #does not account for stock splits
-
+#database currently contains stocks from current s&p 500, if stocks leave/rejoin it gets weird
 if __name__ == '__main__':
+    start_date = "2002-01-01"
+    end_date = "2022-01-01"
+    global database_name
+    # database_name = data_download.download_stock_data(start_date= start_date, end_date= end_date)
+    database_name = "s&p5002002-01-01 to 2022-01-01.csv"
 
     instructions = [['BUY', 'AAPL', 20, "2002-01-02 00:00:00"], ['BUY', 'ABT', 10, "2002-01-02 00:00:00"], ['SELL', 'AAPL', 20, "2020-01-02 00:00:00"], ['SELL', 'ABT', 10, "2003-01-02 00:00:00"]]
 
     run_strategy(instructions)
-    print("Current Capital:", current_capital)
-    print("Current Portfolio Value:", portfolio_value())
+    print(f"Current Capital: {float(current_capital):.2f}")
+    print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
     print("Positions:", positions)
