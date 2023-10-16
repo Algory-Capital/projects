@@ -3,15 +3,9 @@ import yfinance as yf
 import csv
 from datetime import datetime
 import data_download
+import template_strategy
 
-settings = {
-    "C_FLAT": 20,
-    "C_PERCENT": 0.1,
-    # "C_TYPE": "FLAT",
-    # "C_TYPE": "PERCENT",
-    "C_TYPE": "NONE",
-    "INITIAL_CAPITAL": 100000
-}
+settings = template_strategy.get_settings()
 
 # Linear list of trades made
 trades_made = []
@@ -139,9 +133,10 @@ if __name__ == '__main__':
     # database_name = data_download.download_stock_data(start_date= start_date, end_date= end_date)
     database_name = "s&p5002002-01-01 to 2022-01-01.csv"
 
-    instructions = [['BUY', 'AAPL', 20, "2002-01-02 00:00:00"], ['BUY', 'ABT', 10, "2002-01-02 00:00:00"], ['SELL', 'AAPL', 20, "2020-01-02 00:00:00"], ['SELL', 'ABT', 10, "2003-01-02 00:00:00"]]
+    instructions = template_strategy.get_instructions()
 
     run_strategy(instructions)
+    
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
     print("Positions:", positions)
