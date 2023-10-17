@@ -4,6 +4,7 @@ import pandas as pd
 
 def download_stock_data(start_date, end_date):
     # Read and print the stock tickers that make up S&P500
+    #needs to get backtesting wiki data
     tickers = pd.read_html(
         'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
 

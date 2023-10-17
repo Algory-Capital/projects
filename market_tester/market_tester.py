@@ -91,6 +91,7 @@ def sell_stock(symbol, quantity, price, timestamp):
         print("Not enough shares to sell or invalid trade.", new_trade)
     # print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
 
+#per day
 #STRUCTURE SHOULD BE [[BUY, symbol, quantity, timestamp], [SELL, symbol, quantity, timestamp]]
 #timestamp currently in Y-M-D 00:00:00 time system
 def run_strategy(instructions: list[list]):
@@ -134,7 +135,7 @@ if __name__ == '__main__':
     database_name = "s&p5002002-01-01 to 2022-01-01.csv"
 
     instructions = template_strategy.get_instructions()
-
+    
     run_strategy(instructions)
     
     print(f"Current Capital: {float(current_capital):.2f}")
