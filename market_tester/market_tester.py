@@ -1,11 +1,12 @@
 import time
 import yfinance as yf
 import csv
-from datetime import datetime
+import datetime
 import data_download
-import template_strategy
+import strategy as strategy
+import pandas as pd
 
-settings = template_strategy.get_settings()
+settings = strategy.get_settings()
 
 # Linear list of trades made
 trades_made = []
@@ -66,7 +67,6 @@ def buy_stock(symbol, quantity, price, timestamp):
 
     else:
         print("Not enough capital to buy", quantity, "shares of", symbol)
-    # print("BUY:  %d %s AT %.2f" % (quantity, symbol, price))
 
 def sell_stock(symbol, quantity, price, timestamp):
     new_trade = Trade(len(trades_made), symbol=symbol, quantity=quantity, price=price, timestamp=timestamp, type="sell")
@@ -89,54 +89,65 @@ def sell_stock(symbol, quantity, price, timestamp):
  
     else:
         print("Not enough shares to sell or invalid trade.", new_trade)
-    # print("SELL: %d %s AT %d" % (quantity, new_trade.symbol, new_trade.price))
 
-#per day
-#STRUCTURE SHOULD BE [[BUY, symbol, quantity, timestamp], [SELL, symbol, quantity, timestamp]]
-#timestamp currently in Y-M-D 00:00:00 time system
-def run_strategy(instructions: list[list]):
+#STRUCTURE SHOULD BE [[BUY, symbol, quantity], [SELL, symbol, quantity]]
+
+def run_daily_instructions(current_day, instructions = list[list]):
     for order in instructions:
         order_type = order[0]
         symbol = order[1]
         quantity = order[2]
-        timestamp = order[3]
-        # stock = yf.Ticker(symbol)
-        # price = stock.info("currentPrice")
-        price = 0
 
-        with open(database_name, 'r') as csvfile:
-            reader = csv.reader(csvfile)
-            column_headers = next(reader)
-            ticker_index = column_headers.index(symbol)
+        print("CURRENT DATE", current_day)
+        
+        # current_date_str = current_day.strftime("%Y-%m-%d %H:%M:%S")
 
-            for row in reader:
-                if row[0] == timestamp:
-                    target_value = row[ticker_index]
-                    print(f"{order_type: <4} {symbol: <4} on {timestamp}: {float(target_value):.2f}")
-                    price = float(target_value)
-                    break 
-            if price == 0:
-                print(f"{symbol} not in database on {timestamp}")
+
+        price = float(database.loc[current_day][symbol])
 
         if order_type == 'BUY':
-            buy_stock(symbol, quantity, price, timestamp)
+            buy_stock(symbol, quantity, price, current_day)
         elif order_type == 'SELL':
-            sell_stock(symbol, quantity, price, timestamp)
+            sell_stock(symbol, quantity, price, current_day)
         else:
             print(f'Invalid order{order}')
+
+        print(f"{order_type: <4} {symbol: <4} on {current_day}: {float(price):.2f}")
+
+
+def run_timeline(database, start_date, end_date):
+    format = "%Y-%m-%d"
+    start_date = datetime.datetime.strptime(start_date, format)
+    end_date = datetime.datetime.strptime(end_date, format)
+
+    # Set the 'Date' column as the index
+    database.set_index("Date", inplace=True)
+
+    for current_date in pd.date_range(start=start_date, end=end_date):
+        # Check if the date exists in the index
+        if current_date in database.index:
+            data_rows = database.loc[current_date]
+            instructions = strategy.stock_info_to_instructions(data_rows)
+            run_daily_instructions(current_date, instructions)
+            print(current_date)
+        else:
+            print(f"No data available for {current_date}")
+
+    return None
 
 #does not account for stock splits
 #database currently contains stocks from current s&p 500, if stocks leave/rejoin it gets weird
 if __name__ == '__main__':
     start_date = "2002-01-01"
     end_date = "2022-01-01"
-    global database_name
-    # database_name = data_download.download_stock_data(start_date= start_date, end_date= end_date)
-    database_name = "s&p5002002-01-01 to 2022-01-01.csv"
-
-    instructions = template_strategy.get_instructions()
+    # database_csv = data_download.download_stock_data(start_date= start_date, end_date= end_date)
+    database_csv = f"s&p500 {start_date} to {end_date}.csv"
     
-    run_strategy(instructions)
+    database = pd.read_csv(database_csv)
+    database['Date'] = pd.to_datetime(database['Date'])
+
+
+    run_timeline(database, start_date, end_date)
     
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
