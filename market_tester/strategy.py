@@ -15,8 +15,6 @@ def stock_info_to_instructions(data: pd.DataFrame):
     return calculate_daily_instructions(data)
 
 
-
-
 def get_settings():
     
     settings = {
