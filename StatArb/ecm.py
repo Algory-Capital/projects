@@ -6,10 +6,11 @@
 import pandas as pd
 import statsmodels.api as sm
 import warnings
-from HistoricalData import get_spy_data
+from data_download import get_spy_data
 warnings.filterwarnings('ignore')
 import os
 from math import log
+import numpy as np
 
 if not os.path.exists("spy.csv"):
     get_spy_data()
@@ -25,8 +26,8 @@ class Pair:
     def __init__(self,t1,t2,m=3,n=3,train_length = 50):
         self.train_length = train_length
 
-        self.stock1 = t1
-        self.stock2 = t2
+        self.stock1 = t1 #independent, X
+        self.stock2 = t2 #dependent, Y
         self.m = m
         self.n = n
 
@@ -41,6 +42,10 @@ class Pair:
         self.diff_history = pd.DataFrame()
         self.diff_train= pd.DataFrame()
         self.diff_test = pd.DataFrame()
+
+        self.instructions = []
+        self.z_scores = []
+        self.spreads = []
 
         self.get_data(t1,t2,5,5)
         
@@ -223,9 +228,56 @@ class Pair:
         # returns predictions
         return(diff_test, ecm_model_fit) 
 
-    def rolling_update(self):
+    def calculate_instructions(self, enter_position_z = 3, exit_position_z = 1):
+        z_score = self.z_scores[-1]
+        instruction = [None,self.stock2,10] #buy/sell, ticker, quantity
+
+        if z_score < 0 or z_score >>31 -(-z_score>>31)== -1:
+            if abs(z_score) > enter_position_z:
+                instruction[0] = "Buy"
+            elif abs(z_score) <= exit_position_z:
+                instruction[0] = "Sell"
+        else:
+            pass
         
-        pass
+        self.instructions.append(instruction)
+
+
+        ''' try:
+            if z_score >= 0:
+                if z_score > enter_position_z:
+                    #short
+                    instruction[0] = "Short"
+                    raise("Next")
+                if z_score > exit_position_z:
+                    #sell
+                    instruction[1] = "Sell"
+                    raise("Next")
+            else:
+                if z_score < enter_position_z:
+                    #buy
+                    instruction[1] = "Buy"
+                    raise("Next")
+                if z_score < exit_position_z:
+                    #exit short
+                    instruction[0] = "Exercise"
+
+        except Exception("Next"):
+            pass
+        '''
+
+    def calculate_z_score(self,priceX,priceY):
+        spread = abs(log(priceX)-log(priceY))
+        self.spreads.append(spread)
+
+        stddev = np.std(self.spreads)
+        mean = np.mean(np.mean(self.spreads)) #this mean is not rolling. Don't know if this is an issue
+
+        z_score = (spread-mean)/stddev
+
+        self.z_scores.append(z_score)
+
+        self.calculate_instructions() #based on calculated z_score
 
     def outer_test_stddev(self,priceX,priceY,std=3): #enter a position
         spread = abs(log(priceX)-log(priceY))

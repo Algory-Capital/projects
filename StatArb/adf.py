@@ -7,23 +7,25 @@ from tqdm import tqdm
 import threading
 import concurrent.futures
 import statsmodels.api as sm
-#from HistoricalData import get_spy_data
+from data_download import get_spy_data
 
 lock = threading.Lock()
-
+coint = []
 ###
 # Config
 
-dest_coint = "ADF_Cointegrated"
-dest_not_coint = "ADF_Diff"
-csv_path = "spy.csv"
-max_threads = 10
+root = "StatArb/"
+
+dest_coint = root + "ADF_Cointegrated"
+dest_not_coint = root + "ADF_Diff"
+csv_path = root + "spy.csv"
+max_threads = 20
 adf_percentage = "5%"
 ###
 
 start_time = time.time()
 
-if not os.path.exists("spy.csv"):
+if not os.path.exists(csv_path):
     #get_spy_data()
     pass
 
@@ -97,7 +99,9 @@ def compare_two(t1: str,t2: str):
 
             if result[0] < result[4][adf_percentage]:
                 print("Reject H0 - Time Series is Stationary")
-                plt.savefig(os.path.join(dest_coint,filename))
+                coint.append([t1,t2])
+                coint.append([t2,t1])
+                #plt.savefig(os.path.join(dest_coint,filename))
             else:
                 print("Failed to Reject H0 - Time Series is Non-Stationary")
                 #plt.savefig(os.path.join(dest_not_coint,filename))
@@ -115,11 +119,18 @@ def compare_two(t1: str,t2: str):
 #compare_two,tickers[0],tickers[1]
 
 with concurrent.futures.ThreadPoolExecutor(max_threads) as executor:
-    for i in tqdm(range(len(tickers))):
-        for j in tqdm(range(i+1,len(tickers))):
-            executor.submit(compare_two,tickers[i],tickers[j])
-            #thread = threading.Thread(target=compare_two, args=(tickers[i],tickers[j]))
-            #thread.start()
-            #compare_two(tickers[i],tickers[j])
+    with tqdm(total=len(tickers)**2) as pbar:
+        for i in range(len(tickers)):
+            for j in range(i+1,len(tickers)):
+                executor.submit(compare_two,tickers[i],tickers[j])
+                #thread = threading.Thread(target=compare_two, args=(tickers[i],tickers[j]))
+                #thread.start()
+                #compare_two(tickers[i],tickers[j])
+                pbar.update()
+
+data = pd.DataFrame(coint)
+data.to_csv(path=dest_coint)
+
+
 
 print(f"Completed program. Took {time.time()-start_time} seconds.")
