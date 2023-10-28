@@ -12,11 +12,12 @@ import os
 from math import log
 import numpy as np
 
-if not os.path.exists("spy.csv"):
+root = "StatArb"
+
+if not os.path.exists(os.path.join(root,"spy.csv")):
     get_spy_data()
 
-spy = pd.read_csv("spy.csv")
-predictors = ["X","const",'disequilibrium']
+spy = pd.read_csv(os.path.join(root,"spy.csv"))
 gammas = set()
 alphas = set()
 data_train = pd.DataFrame()
@@ -25,13 +26,14 @@ data = pd.DataFrame()
 class Pair:
     def __init__(self,t1,t2,m=3,n=3,train_length = 50):
         self.train_length = train_length
+        self.ecm_results = None
 
         self.stock1 = t1 #independent, X
         self.stock2 = t2 #dependent, Y
         self.m = m
         self.n = n
 
-        self.predictors = ["X","const",'disequilbrium']
+        self.predictors = ["X","const",'disequilibrium']
         self.gammas = set()
         self.alphas = set()
         self.data_train = pd.DataFrame()
@@ -42,6 +44,7 @@ class Pair:
         self.diff_history = pd.DataFrame()
         self.diff_train= pd.DataFrame()
         self.diff_test = pd.DataFrame()
+        # I don't know if splitting data into training and test is necessary for backtest
 
         self.instructions = []
         self.z_scores = []
@@ -49,7 +52,7 @@ class Pair:
 
         self.get_data(t1,t2,5,5)
         
-    def get_data(self,t1,t2,m,n):
+    def get_data(self,t1,t2,m,n): #called by Pair constructor
         series_X = spy[t1]
         series_X.name = "X"
 
@@ -74,9 +77,10 @@ class Pair:
         
 
         self.data[close.name] = close
-        self.data.dropna(inplace=True)
+        print(self.data)
 
         self.data['disequilibrium'] = self.get_disequilibrium()
+        self.data.dropna(inplace=True)
         self.data_train = self.data[:-self.train_length].reset_index(drop=True)
         self.data_test = self.data[-self.train_length:].reset_index(drop=True)
 
@@ -87,10 +91,12 @@ class Pair:
         # diff everything
         self.diff_data = self.data.diff().dropna().reset_index(drop=True)
         self.close = self.close.diff().dropna().reset_index(drop=True)
-
+        
+        print(self.diff_data)
         self.diff_train = self.diff_data[:-self.train_length].reset_index(drop=True)
-        print(self.diff_train,self.diff_data)
+        print(self.diff_train)
         self.diff_test = self.data[-self.train_length:].reset_index(drop=True) #all(1) for columns
+        print(self.diff_test)
 
         #close = close.reset_index(drop=True)
 
@@ -107,27 +113,28 @@ class Pair:
         
         print(lr_model_fit.params.keys())
         #const (beta_0), X (beta_1)
-        self.data['disequilibrium'] = lr_model_fit.resid
+        self.data['disequilibrium'] = lr_model_fit.resid # disequilibrium data itself is e_hat. The coefficient of disequilibrium column from the model will be π
+
+        # From reading, pi can be calculated as π=1−∑a_i from a=1 to n (n being number of lagged a terms). I don't know if the result is the exact same.
         print(self.data['disequilibrium'])
         return lr_model_fit.resid #error term
 
-    def get_error_correction_coefficient(self,params): #pi
-        # 1-sum(i for i in a[i])
-        self.err_cor_coeff = 1 - sum(params[i] for i in alphas)
-        return -self.err_cor_coeff
 
     def create_ecm(self):
         #self.get_data(spy.columns[1],spy.columns[2],3,3)
 
-        #run training data
+        # Run training data
+        # This function runs a regression to get coefficient values
+        # Example predictors for 5 lagged terms for both gamma and alpha: 
+        # ['X', 'const', 'disequilibrium', 'gamma_1', 'gamma_2', 'gamma_3', 'gamma_4', 'gamma_5', 'a_1', 'a_2', 'a_3', 'a_4', 'a_5']
+
+        print(self.predictors)
 
         self.data_train = sm.add_constant(self.data_train)
 
         self.data_train = self.data_train.reset_index(drop=True)
-
-        print(self.data_train,self.data_train.head(0),predictors)
         
-        model = sm.OLS(self.data_train["close"],self.data_train[predictors]).fit()
+        model = sm.OLS(self.data_train["close"],self.data_train[self.predictors]).fit()
 
         print(model.summary())
 
@@ -140,22 +147,23 @@ class Pair:
         # add all of terms for sigma by using list comprehension + append
         #fitted model.predict()
 
-    def roll_forecast_ecm(self,lr_train,lr_test,diff_train,diff_test,y_var='close',X_vars=predictors,lr_X_vars=['close','const'],data_train=data_train,):
+    def roll_forecast_ecm(self,lr_train,lr_test,diff_train,diff_test,X_vars,y_var='close',lr_X_vars=['close','const'],data_train=data_train,):
         #y_var,X_vars,lr_train,lr_test,diff_train,diff_test
 
         lr_train.dropna(inplace=True)
         #dataframes that track past history
         self.history = lr_train
-        self.diff_history = diff_train.dropna()
-        print(self.diff_history)
+        self.diff_history = diff_train #error with dropping first row
+        print(self.diff_history,self.diff_history.isnull().values.any())
 
         # linear model to predict long-run relationship
-        print(self.history)
+        print(self.history, self.history.isnull().values.any())
         lr_model_train = sm.OLS(self.history[[y_var]],self.history[lr_X_vars])
         # fits lr model
         lr_model_train_fit = lr_model_train.fit(cov_type='HC0')
         # add disequilibrium column for training period
         self.diff_train['disequilibrium'] = lr_model_train_fit.resid.shift(1)
+        self.diff_train.dropna(axis=0,how="any",inplace=True) #drops first row, because shifting to get epsilon_(t-1) produces NaN on first row (oldest value)
 
         # creates an empty list that will hold the residuals for the next period
         self.disequilibrium = []
@@ -165,7 +173,7 @@ class Pair:
         for i in range(len(lr_test)):
             
             # estimates a linear model to predict the longrun relationship
-            print(self.history)
+            #print(self.history)
             lr_model = sm.OLS(self.history[[y_var]], self.history[lr_X_vars])
             # fits the lr model
             lr_model_fit = lr_model.fit(cov_type='HC0')
@@ -179,15 +187,14 @@ class Pair:
             # grabs the observation at the ith index
             obs = lr_test[i : i + 1]
             # appends the observation to the estimation data set
-            print("Hello",self.history,obs,len(obs))
             #self.history = self.history.append(obs)
             self.history = pd.concat([self.history,obs])
             
         # creates a column of the lagged disequilibrium values 
-        print(len(self.diff_test),len(self.disequilibrium))
-        print(self.disequilibrium)
+        #print(len(self.diff_test),len(self.disequilibrium))
+        #print(self.disequilibrium)
         self.diff_test['disequilibrium'] = self.disequilibrium
-        print(self.diff_history)
+        #print(self.diff_history)
         
         
         # this chunk of code does the 1-step ahead ECM estimation and prediction
@@ -224,15 +231,20 @@ class Pair:
         diff_test['delta_y_hat'] = predictions     
         diff_test['ec_coef'] = error_correction_coefficients
         diff_test['ec_stderr'] = error_correction_coef_stderr
+
+        print(ecm_model_fit)
         
         # returns predictions
         return(diff_test, ecm_model_fit) 
 
-    def calculate_instructions(self, enter_position_z = 3, exit_position_z = 1):
+    def calculate_instructions(self, enter_position_z = 3, exit_position_z = 1): # called by calculate_z_score
+        """
+        Needs to inverse order for other side
+        """
         z_score = self.z_scores[-1]
         instruction = [None,self.stock2,10] #buy/sell, ticker, quantity
 
-        if z_score < 0 or z_score >>31 -(-z_score>>31)== -1:
+        if z_score < 0:
             if abs(z_score) > enter_position_z:
                 instruction[0] = "Buy"
             elif abs(z_score) <= exit_position_z:
@@ -279,26 +291,18 @@ class Pair:
 
         self.calculate_instructions() #based on calculated z_score
 
-    def outer_test_stddev(self,priceX,priceY,std=3): #enter a position
-        spread = abs(log(priceX)-log(priceY))
-
-    def inner_test_stddev(self,priceX,priceY,std=1): # exit a position
-        spread = abs(log(priceX)-log(priceY))
-
-    def generate_instruction(self,data,model,*args):
-        pass
-
     def plot_ecm(*func):
         def wrapper():
             pass
 
         return wrapper
 
+    def pair_main(self):
+        self.create_ecm()
+        #y_var,X_vars,lr_X_vars,lr_train,lr_test,diff_train,diff_test = 'close',self.predictors,['close_market','const'],self.data_train,self.data_test,self.diff_train,self.diff_test
+        self.diff_history,self.ecm_results = self.roll_forecast_ecm(self.data_train,self.data_test,self.diff_train,self.diff_test,self.predictors)
+        print("done")
+
 if __name__ == "__main__":
     stock_pair = Pair(spy.columns[1],spy.columns[2])
-    stock_pair.create_ecm()
-
-    y_var,X_vars,lr_X_vars,lr_train,lr_test,diff_train,diff_test = 'close',stock_pair.predictors,['close_market','const'],stock_pair.data_train.dropna(),stock_pair.data_test,stock_pair.diff_train,stock_pair.diff_test
-    stock_pair.diff_history,ecm_results = stock_pair.roll_forecast_ecm(lr_train,lr_test,diff_train,diff_test)
-
-    print("done")
+    stock_pair.pair_main()
