@@ -25,6 +25,7 @@ data = pd.DataFrame()
 
 class Pair:
     def __init__(self,t1,t2,m=3,n=3,train_length = 50):
+        self.name = f"{t1} {t2}" #we do this so we can do .split() later to get separate tickers for generating instructions
         self.train_length = train_length
         self.ecm_results = None
 
@@ -226,22 +227,42 @@ class Pair:
             # appends the error_correction coefficient to the list  
             error_correction_coefficients.append(ecm_model_fit.params.disequilibrium)
             error_correction_coef_stderr.append(ecm_model_fit.HC0_se.disequilibrium)
-        
+
+        # generate z-scores for instructions so we can backtest
+        # we append to self.z_scores
+
+        for i in range(len(self.data)): #non-differenced
+            # X: X. Y: close
+            obs_x = self.data.iloc[i]['X']
+            obs_y = self.data.iloc[i]['close']
+            self.calculate_z_score(obs_x,obs_y)
+
         # adds columns for our lists
         diff_test['delta_y_hat'] = predictions     
         diff_test['ec_coef'] = error_correction_coefficients
         diff_test['ec_stderr'] = error_correction_coef_stderr
+
+        diff_test['z_scores'] = self.z_scores[-len(diff_test):]
+        diff_test['instructions'] = self.instructions[-len(diff_test):]
+
+
+        print(self.z_scores)
+        print(len(self.z_scores))
+        print(diff_test['z_scores'])
+        print(self.diff_data)
+
+        print(diff_test)
 
         print(ecm_model_fit)
         
         # returns predictions
         return(diff_test, ecm_model_fit) 
 
-    def calculate_instructions(self, enter_position_z = 3, exit_position_z = 1): # called by calculate_z_score
+    def calculate_instruction(self, z_score,enter_position_z = 3, exit_position_z = 1): # called by calculate_z_score
         """
         Needs to inverse order for other side
         """
-        z_score = self.z_scores[-1]
+
         instruction = [None,self.stock2,10] #buy/sell, ticker, quantity
 
         if z_score < 0:
@@ -279,17 +300,23 @@ class Pair:
         '''
 
     def calculate_z_score(self,priceX,priceY):
-        spread = abs(log(priceX)-log(priceY))
+        print(priceX,priceY)
+        spread = abs(log(priceX)-log(priceY)) #careful for taking log of negative price
         self.spreads.append(spread)
 
         stddev = np.std(self.spreads)
-        mean = np.mean(np.mean(self.spreads)) #this mean is not rolling. Don't know if this is an issue
+        mean = np.mean(self.spreads) #this mean is not rolling. Don't know if this is an issue
 
-        z_score = (spread-mean)/stddev
+        z_score = (spread-mean)/stddev 
+
+        if np.isnan(z_score): #issue with division by zero if no spread history
+            z_score = 0
+
+        print(self.spreads,stddev,mean,self.z_scores,z_score)
 
         self.z_scores.append(z_score)
 
-        self.calculate_instructions() #based on calculated z_score
+        self.calculate_instruction(z_score) #based on calculated z_score
 
     def plot_ecm(*func):
         def wrapper():

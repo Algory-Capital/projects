@@ -4,6 +4,9 @@ import pandas as pd
 import os
 import adf
 import time
+#from market_tester_copy import run_timeline,run_daily_instructions
+import pandas_market_calendars as mcal
+from datetime import datetime
 
 root = "StatArb"
 
@@ -27,13 +30,16 @@ def calculate_daily_instructions(data: pd.DataFrame, pair: Pair):
 def stock_info_to_instructions(data: pd.DataFrame):
     return calculate_daily_instructions(data)
 
-def process_pair(pair):
+def process_pair(pair)->Pair:
     """
     Does all the operations necessary for one pair
+    @pair: Pair object
     """
     pair = Pair(pair[0],pair[1])
 
     pair.pair_main()
+
+    return pair
 
 if __name__ == "__main__":
     start_time = time.time()

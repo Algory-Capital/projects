@@ -4,8 +4,13 @@ import csv
 import datetime
 from data_download import get_spy_data
 import strategy as strategy
+import adf
+from strategy import process_pair,root
 import pandas as pd
 import os
+from ecm import Pair
+import matplotlib.pyplot as plt
+#from helper import get_market_start_date
 
 if not os.path.exists('spy.csv'):
     get_spy_data
@@ -20,7 +25,7 @@ positions = {}
 
 current_capital = settings["INITIAL_CAPITAL"]
 
-class Trade:
+class Trade():
     def __init__(self, trade_id, symbol, quantity, price, timestamp, type):
         self.trade_id = trade_id
         self.symbol = symbol
@@ -28,6 +33,22 @@ class Trade:
         self.price = price
         self.timestamp = timestamp
         self.type = type
+
+def get_pair_instructions(pair: Pair):
+    """
+    Gets pair instructions
+    @pair: Pair object
+    """
+
+    """for i in range(len(pair.instructions)):
+        instruction = pair.instructions[i]  #buy/sell, ticker, quantity
+        #position,ticker,quantity = instruction
+
+        #trade_instruction = Trade("",ticker,quantity,None,None,None)
+        database.iloc[len(database.index)] = instruction"""
+    
+    return pair.instructions
+
 
 def calculate_commission(trade):
     if settings.get("C_TYPE") == "PERCENT":
@@ -119,13 +140,17 @@ def run_daily_instructions(current_day, instructions = list[list]):
         print(f"{order_type: <4} {symbol: <4} on {current_day}: {float(price):.2f}")
 
 
-def run_timeline(database, start_date, end_date):
+def run_timeline(database: pd.DataFrame, start_date, end_date):
+    """
+    Runs all instructions from a dataframe
+    """
     format = "%Y-%m-%d"
     start_date = datetime.datetime.strptime(start_date, format)
     end_date = datetime.datetime.strptime(end_date, format)
 
     # Set the 'Date' column as the index
     database.set_index("Date", inplace=True)
+    database.sort_index(inplace=True)
 
     for current_date in pd.date_range(start=start_date, end=end_date):
         # Check if the date exists in the index
@@ -139,10 +164,16 @@ def run_timeline(database, start_date, end_date):
 
     return None
 
+def plot_all(df:pd.DataFrame):
+    fig = plt.figure()
+    ax = fig.gca()
+    df.index = df.index.map(lambda time: time.strftime("%m-%d-%Y"))
+    pass
+
 #does not account for stock splits
 #database currently contains stocks from current s&p 500, if stocks leave/rejoin it gets weird
 if __name__ == '__main__':
-    start_date = "2002-01-01"
+    """start_date = "2002-01-01"
     end_date = "2022-01-01"
     # database_csv = data_download.download_stock_data(start_date= start_date, end_date= end_date)
     database_csv = f"s&p500 {start_date} to {end_date}.csv"
@@ -151,7 +182,25 @@ if __name__ == '__main__':
     database['Date'] = pd.to_datetime(database['Date'])
 
 
-    run_timeline(database, start_date, end_date)
+    run_timeline(database, start_date, end_date)"""
+
+    database = pd.DataFrame()
+
+    if not os.path.exists(os.path.join(root,"coint.csv")):
+        adf.main(5)
+
+    # Read to csv and convert to list. Iterating through DataFrame rows is considered an anti-pattern
+    coint_pairs = pd.read_csv(os.path.join(root,"coint.csv")).to_list() 
+
+    pairs = [] # contains the Pair objects
+
+    for pair_set in coint_pairs:
+        pairs.append(process_pair(pair_set))
+
+    for pair in pairs:
+        instructions = get_pair_instructions(pair)
+        database = pd.concat([database,instructions])
+
     
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
