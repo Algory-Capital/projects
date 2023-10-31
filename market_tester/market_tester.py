@@ -5,6 +5,8 @@ import datetime
 import data_download
 import strategy as strategy
 import pandas as pd
+from tqdm import tqdm
+
 
 settings = strategy.get_settings()
 
@@ -98,7 +100,7 @@ def run_daily_instructions(current_day, instructions = list[list]):
         symbol = order[1]
         quantity = order[2]
 
-        print("CURRENT DATE", current_day)
+        # print("CURRENT DATE", current_day)
         
         # current_date_str = current_day.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -112,7 +114,7 @@ def run_daily_instructions(current_day, instructions = list[list]):
         else:
             print(f'Invalid order{order}')
 
-        print(f"{order_type: <4} {symbol: <4} on {current_day}: {float(price):.2f}")
+        # print(f"{order_type: <4} {symbol: <4} on {current_day}: {float(price):.2f}")
 
 
 def run_timeline(database, start_date, end_date):
@@ -123,15 +125,20 @@ def run_timeline(database, start_date, end_date):
     # Set the 'Date' column as the index
     database.set_index("Date", inplace=True)
 
-    for current_date in pd.date_range(start=start_date, end=end_date):
-        # Check if the date exists in the index
-        if current_date in database.index:
-            data_rows = database.loc[current_date]
-            instructions = strategy.stock_info_to_instructions(data_rows)
-            run_daily_instructions(current_date, instructions)
-            print(current_date)
-        else:
-            print(f"No data available for {current_date}")
+    # Create a tqdm progress bar for the date range
+    with tqdm(total=len(pd.date_range(start=start_date, end=end_date))) as pbar:
+        for current_date in pd.date_range(start=start_date, end=end_date):
+            # Check if the date exists in the index
+            if current_date in database.index:
+                data_rows = database.loc[current_date]
+                instructions = strategy.stock_info_to_instructions(data_rows)
+                run_daily_instructions(current_date, instructions)
+                # print(current_date)
+            else:
+                pass
+                # print(f"No data available for {current_date}")
+
+            pbar.update(1)  # Update the progress bar
 
     return None
 
