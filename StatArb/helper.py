@@ -2,6 +2,7 @@ from datetime import datetime,timedelta
 import pandas as pd
 import pandas_market_calendars as mcal
 import pytz
+from ecm import Pair
 
 def get_market_start_date(days_ago = 50,end_date = datetime.now(),return_type="str"):
     #assumes that each stock is listed on either NYSE or Nasdaq, which follow the same schedule
@@ -13,8 +14,12 @@ def get_market_start_date(days_ago = 50,end_date = datetime.now(),return_type="s
         # Format: year-month-day
     return date
 
-def get_market_valid_times(length = 50,end_date = datetime.now()):
-    start = get_market_start_date(length,end_date)
+def get_market_valid_times(length = 50,end_date = datetime.now(),start_date=None) -> list[str]: # start_date is sent as string
+    if not start_date:
+        date = get_market_start_date(length,end_date)
+    else:
+        date = start_date
+    
     dates = []
     nyse = mcal.get_calendar('NYSE')
     for _ in range(length):
@@ -23,6 +28,39 @@ def get_market_valid_times(length = 50,end_date = datetime.now()):
         dates.append(date)
     
     return dates
+
+def series_index_to_dates(series: pd.Series, start_date: str) -> pd.Series:
+    """
+    Sets index for series to dates to prepare mergin
+    
+    @series: pd.Series
+    @ start_date: '%m/%d/%Y'
+    """
+    #format = '%m/%d/%Y'
+    #start_datetime = datetime.strptime(start_date,format)
+
+    dates = get_market_valid_times(len(series),start_date)
+
+    series.index = dates
+
+    return series
+
+def generate_instruction_lists(df: pd.DataFrame):
+    return df.values.tolist()
+
+def process_pair(pair)->Pair:
+    """
+    Does all the operations necessary for one pair
+    @pair: Pair object
+    """
+    pair = pair[1] #detach index. Values are located in pair[1]
+    split_pair = pair.split()
+    print(split_pair)
+    pair = Pair(split_pair[0],split_pair[1])
+
+    pair.pair_main()
+
+    return pair
 
 """
 def get_valid_times(start_time = datetime.now(),market_exchange='NYSE',length=None):

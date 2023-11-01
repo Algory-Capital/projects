@@ -138,7 +138,7 @@ def main(bound:int = len(tickers)):
     Function brute forces ADF test on stocks from S&P500 for cointegration
     """
     coint = []
-    total_operations = sum(i for i in range(len(tickers)))
+    total_operations = sum(i for i in range(bound))
    
     with concurrent.futures.ThreadPoolExecutor(max_processes) as executor:
         with tqdm(total=total_operations) as pbar:

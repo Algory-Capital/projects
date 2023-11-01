@@ -5,11 +5,13 @@ import datetime
 from data_download import get_spy_data
 import strategy as strategy
 import adf
-from strategy import process_pair,root
+from strategy import process_pair
 import pandas as pd
 import os
 from ecm import Pair
 import matplotlib.pyplot as plt
+from helper import series_index_to_dates
+import numpy as np
 #from helper import get_market_start_date
 
 if not os.path.exists('spy.csv'):
@@ -48,9 +50,10 @@ def pair_to_database(pair: Pair):
         database.iloc[len(database.index)] = instruction"""
     global database
 
-    instructions = pair.instructions
+    instructions = pd.Series(pair.instructions)
+    instructions = series_index_to_dates(instructions)
 
-    database.merge(instructions,on="Date",inplace=True)
+    database.merge(instructions,how = 'outer',inplace=True)
 
 
 def calculate_commission(trade):
@@ -122,6 +125,9 @@ def sell_stock(symbol, quantity, price, timestamp):
 
 def run_daily_instructions(current_day, instructions = list[list]):
     for order in instructions:
+        if np.isnan(order):
+            continue
+
         order_type = order[0]
         symbol = order[1]
         quantity = order[2]
@@ -188,22 +194,32 @@ if __name__ == '__main__':
     run_timeline(database, start_date, end_date)"""
 
     database = pd.DataFrame()
+    root = "StatArb/ADF_Cointegrated"
+
+    print(root)
 
     if not os.path.exists(os.path.join(root,"coint.csv")):
-        adf.main(5)
+        print("Coint csv not found, calling adf main. Input to continue")
+        input()
+        adf.main(300)
+        assert(os.path.exists(os.path.join(root,"coint.csv")))
 
     # Read to csv and convert to list. Iterating through DataFrame rows is considered an anti-pattern
-    coint_pairs = pd.read_csv(os.path.join(root,"coint.csv")).to_list() 
+    coint_pairs = pd.read_csv(os.path.join(root,"coint.csv")).values
 
     pairs = [] # contains the Pair objects
 
     for pair_set in coint_pairs:
+        print(pair_set[1],type(pair_set[1]))
         pairs.append(process_pair(pair_set))
 
     for pair in pairs:
         instructions = pair_to_database(pair)
-        database = pd.concat([database,instructions])
 
+    database.sort_index(inplace=True)
+    print(database)
+    database_index = database.index
+    run_timeline(database,database_index[0].database_index[-1])
     
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
