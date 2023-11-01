@@ -34,9 +34,9 @@ class Trade():
         self.timestamp = timestamp
         self.type = type
 
-def get_pair_instructions(pair: Pair):
+def pair_to_database(pair: Pair):
     """
-    Gets pair instructions
+    Gets pair instructions and merges them with database by index
     @pair: Pair object
     """
 
@@ -46,8 +46,11 @@ def get_pair_instructions(pair: Pair):
 
         #trade_instruction = Trade("",ticker,quantity,None,None,None)
         database.iloc[len(database.index)] = instruction"""
-    
-    return pair.instructions
+    global database
+
+    instructions = pair.instructions
+
+    database.merge(instructions,on="Date",inplace=True)
 
 
 def calculate_commission(trade):
@@ -198,7 +201,7 @@ if __name__ == '__main__':
         pairs.append(process_pair(pair_set))
 
     for pair in pairs:
-        instructions = get_pair_instructions(pair)
+        instructions = pair_to_database(pair)
         database = pd.concat([database,instructions])
 
     
