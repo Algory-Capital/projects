@@ -20,13 +20,12 @@ if not os.path.exists(os.path.join(root,"spy.csv")):
 spy = pd.read_csv(os.path.join(root,"spy.csv"))
 gammas = set()
 alphas = set()
-data_train = pd.DataFrame()
 data = pd.DataFrame()
 
 class Pair:
-    def __init__(self,t1,t2,m=3,n=3,train_length = 50):
+    def __init__(self,t1,t2,m=3,n=3,):
         self.name = f"{t1} {t2}" #we do this so we can do .split() later to get separate tickers for generating instructions
-        self.train_length = train_length
+        self.start_date = None
         self.ecm_results = None
 
         self.stock1 = t1 #independent, X
@@ -37,14 +36,12 @@ class Pair:
         self.predictors = ["X","const",'disequilibrium']
         self.gammas = set()
         self.alphas = set()
-        self.data_train = pd.DataFrame()
         self.data = pd.DataFrame()
         self.close = pd.Series()
 
         self.history = pd.DataFrame()
         self.diff_history = pd.DataFrame()
-        self.diff_train= pd.DataFrame()
-        self.diff_test = pd.DataFrame()
+
         # I don't know if splitting data into training and test is necessary for backtest
 
         self.instructions = []
@@ -56,7 +53,9 @@ class Pair:
     def get_data(self,t1,t2,m,n): #called by Pair constructor
         series_X = spy[t1]
         series_X.name = "X"
-
+        
+        self.dates = list(map(lambda x: x.split(" ")[0],spy['Date'].tolist()))
+        
         close = spy[t2] #series_Y
         close.name = "close"
 
@@ -81,23 +80,27 @@ class Pair:
         print(self.data)
 
         self.data['disequilibrium'] = self.get_disequilibrium()
+        self.data['dates'] = self.dates
         self.data.dropna(inplace=True)
-        self.data_train = self.data[:-self.train_length].reset_index(drop=True)
-        self.data_test = self.data[-self.train_length:].reset_index(drop=True)
 
-        print(self.data)
-        print(self.data_train)
-        print(len(self.data_test))
+        self.data.set_index('dates',drop=True,inplace=True)
+
+        self.start_date = self.data.index.values[0]
 
         # diff everything
         self.diff_data = self.data.diff().dropna().reset_index(drop=True)
         self.close = self.close.diff().dropna().reset_index(drop=True)
+
+        self.diff_start_date = self.diff_data.index.values[0]
         
         print(self.diff_data)
+
+        # These dataframes are used for testing rolling_ecm function. Probably temporary for now
+        self.train_length = 50
+        self.data_train = self.data[:-self.train_length].reset_index(drop=True)
+        self.data_test = self.data[-self.train_length:].reset_index(drop=True)
         self.diff_train = self.diff_data[:-self.train_length].reset_index(drop=True)
-        print(self.diff_train)
         self.diff_test = self.data[-self.train_length:].reset_index(drop=True) #all(1) for columns
-        print(self.diff_test)
 
         #close = close.reset_index(drop=True)
 
@@ -131,11 +134,11 @@ class Pair:
 
         print(self.predictors)
 
-        self.data_train = sm.add_constant(self.data_train)
+        self.data = sm.add_constant(self.data)
 
-        self.data_train = self.data_train.reset_index(drop=True)
+        self.data = self.data.reset_index(drop=True)
         
-        model = sm.OLS(self.data_train["close"],self.data_train[self.predictors]).fit()
+        model = sm.OLS(self.data["close"],self.data[self.predictors]).fit()
 
         print(model.summary())
 
@@ -148,7 +151,7 @@ class Pair:
         # add all of terms for sigma by using list comprehension + append
         #fitted model.predict()
 
-    def roll_forecast_ecm(self,lr_train,lr_test,diff_train,diff_test,X_vars,y_var='close',lr_X_vars=['close','const'],data_train=data_train,):
+    def roll_forecast_ecm(self,lr_train,lr_test,diff_train,diff_test,X_vars,y_var='close',lr_X_vars=['close','const']):
         #y_var,X_vars,lr_train,lr_test,diff_train,diff_test
 
         lr_train.dropna(inplace=True)
@@ -326,7 +329,7 @@ class Pair:
 
     def pair_main(self):
         self.create_ecm()
-        #y_var,X_vars,lr_X_vars,lr_train,lr_test,diff_train,diff_test = 'close',self.predictors,['close_market','const'],self.data_train,self.data_test,self.diff_train,self.diff_test
+        #y_var,X_vars,lr_X_vars = 'close',self.predictors,['close_market','const']
         self.diff_history,self.ecm_results = self.roll_forecast_ecm(self.data_train,self.data_test,self.diff_train,self.diff_test,self.predictors)
         print("done")
 

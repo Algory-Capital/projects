@@ -14,18 +14,20 @@ def get_market_start_date(days_ago = 50,end_date = datetime.now(),return_type="s
         # Format: year-month-day
     return date
 
-def get_market_valid_times(length = 50,end_date = datetime.now(),start_date=None) -> list[str]: # start_date is sent as string
+def get_market_valid_times(length = 50,start_date:str = None,end_date = datetime.now()) -> list[str]: # start_date is sent as string
     if not start_date:
         date = get_market_start_date(length,end_date)
     else:
         date = start_date
     
+    date = pd.to_datetime(end_date.strftime('%m/%d/%Y'))
     dates = []
+
     nyse = mcal.get_calendar('NYSE')
     for _ in range(length):
         date = date + pd.tseries.offsets.CustomBusinessDay(1, holidays = nyse.holidays().holidays)
-        date = date.strftime('%Y-%m-%d')
-        dates.append(date)
+        new_date = date.strftime('%Y-%m-%d')
+        dates.append(new_date)
     
     return dates
 
@@ -53,10 +55,10 @@ def process_pair(pair)->Pair:
     Does all the operations necessary for one pair
     @pair: Pair object
     """
-    pair = pair[1] #detach index. Values are located in pair[1]
-    split_pair = pair.split()
-    print(split_pair)
-    pair = Pair(split_pair[0],split_pair[1])
+    pair = pair[1][1:-1].split(", ") # take values, then slice off brackets, split string by comma to get list
+    pair = [i.strip("'") for i in pair]
+
+    pair = Pair(pair[0], pair[1])
 
     pair.pair_main()
 

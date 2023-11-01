@@ -95,7 +95,6 @@ def compare_two(t1: str,t2: str,pbar):
             result = adfuller(combined)
 
             #print(result)
-            #input()
             '''
             print(f'ADF Statistic: {result[0]:.2f}')
             print(f'p-value: {result[1]:.2f}')

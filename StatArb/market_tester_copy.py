@@ -50,10 +50,10 @@ def pair_to_database(pair: Pair):
         database.iloc[len(database.index)] = instruction"""
     global database
 
-    instructions = pd.Series(pair.instructions)
-    instructions = series_index_to_dates(instructions)
+    instructions = pd.Series(pair.instructions,name=pair.name)
+    instructions = series_index_to_dates(instructions,pair.start_date)
 
-    database.merge(instructions,how = 'outer',inplace=True)
+    database = database.merge(instructions,how = 'outer',left_index=True,right_index=True)
 
 
 def calculate_commission(trade):
@@ -124,10 +124,8 @@ def sell_stock(symbol, quantity, price, timestamp):
 #STRUCTURE SHOULD BE [[BUY, symbol, quantity], [SELL, symbol, quantity]]
 
 def run_daily_instructions(current_day, instructions = list[list]):
+    print(instructions,type(instructions))
     for order in instructions:
-        if np.isnan(order):
-            continue
-
         order_type = order[0]
         symbol = order[1]
         quantity = order[2]
@@ -158,25 +156,25 @@ def run_timeline(database: pd.DataFrame, start_date, end_date):
     end_date = datetime.datetime.strptime(end_date, format)
 
     # Set the 'Date' column as the index
-    database.set_index("Date", inplace=True)
-    database.sort_index(inplace=True)
+    #database.set_index("Date", inplace=True)
+    #database.sort_index(inplace=True)
 
-    for current_date in pd.date_range(start=start_date, end=end_date):
+    for current_date in database.index:
         # Check if the date exists in the index
-        if current_date in database.index:
+        try:
             data_rows = database.loc[current_date]
-            instructions = strategy.stock_info_to_instructions(data_rows)
+            instructions = data_rows
             run_daily_instructions(current_date, instructions)
             print(current_date)
-        else:
-            print(f"No data available for {current_date}")
+        except Exception as e:
+            print(f"No data available for {current_date}, Error: {e}")
 
     return None
 
 def plot_all(df:pd.DataFrame):
     fig = plt.figure()
     ax = fig.gca()
-    df.index = df.index.map(lambda time: time.strftime("%m-%d-%Y"))
+    df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
     pass
 
 #does not account for stock splits
@@ -201,7 +199,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(root,"coint.csv")):
         print("Coint csv not found, calling adf main. Input to continue")
         input()
-        adf.main(300)
+        adf.main(20)
         assert(os.path.exists(os.path.join(root,"coint.csv")))
 
     # Read to csv and convert to list. Iterating through DataFrame rows is considered an anti-pattern
@@ -210,7 +208,6 @@ if __name__ == '__main__':
     pairs = [] # contains the Pair objects
 
     for pair_set in coint_pairs:
-        print(pair_set[1],type(pair_set[1]))
         pairs.append(process_pair(pair_set))
 
     for pair in pairs:
@@ -219,7 +216,7 @@ if __name__ == '__main__':
     database.sort_index(inplace=True)
     print(database)
     database_index = database.index
-    run_timeline(database,database_index[0].database_index[-1])
+    run_timeline(database,database_index[0],database_index[-1])
     
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
