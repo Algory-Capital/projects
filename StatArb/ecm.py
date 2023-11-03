@@ -54,7 +54,7 @@ class Pair:
         series_X = spy[t1]
         series_X.name = "X"
         
-        self.dates = list(map(lambda x: x.split(" ")[0],spy['Date'].tolist()))
+        self.dates = list(map(lambda x: x.split(" ")[0],spy['Date'].tolist())) # chops off hours, minutes, seconds from index
         
         close = spy[t2] #series_Y
         close.name = "close"

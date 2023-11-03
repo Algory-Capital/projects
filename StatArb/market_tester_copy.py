@@ -36,7 +36,7 @@ class Trade():
         self.timestamp = timestamp
         self.type = type
 
-def pair_to_database(pair: Pair):
+def pair_to_orders(pair: Pair):
     """
     Gets pair instructions and merges them with database by index
     @pair: Pair object
@@ -48,12 +48,12 @@ def pair_to_database(pair: Pair):
 
         #trade_instruction = Trade("",ticker,quantity,None,None,None)
         database.iloc[len(database.index)] = instruction"""
-    global database
+    global orders
 
     instructions = pd.Series(pair.instructions,name=pair.name)
     instructions = series_index_to_dates(instructions,pair.start_date)
 
-    database = database.merge(instructions,how = 'outer',left_index=True,right_index=True)
+    orders = orders.merge(instructions,how = 'outer',left_index=True,right_index=True)
 
 
 def calculate_commission(trade):
@@ -147,7 +147,7 @@ def run_daily_instructions(current_day, instructions = list[list]):
         print(f"{order_type: <4} {symbol: <4} on {current_day}: {float(price):.2f}")
 
 
-def run_timeline(database: pd.DataFrame, start_date, end_date):
+def run_timeline(orders: pd.DataFrame, start_date, end_date):
     """
     Runs all instructions from a dataframe
     """
@@ -159,10 +159,10 @@ def run_timeline(database: pd.DataFrame, start_date, end_date):
     #database.set_index("Date", inplace=True)
     #database.sort_index(inplace=True)
 
-    for current_date in database.index:
+    for current_date in orders.index:
         # Check if the date exists in the index
         try:
-            data_rows = database.loc[current_date]
+            data_rows = orders.loc[current_date]
             instructions = data_rows
             run_daily_instructions(current_date, instructions)
             print(current_date)
@@ -191,7 +191,15 @@ if __name__ == '__main__':
 
     run_timeline(database, start_date, end_date)"""
 
-    database = pd.DataFrame()
+    root = "StatArb"
+    csv_path = "spy.csv"
+    database = pd.read_csv(os.path.join(root,csv_path))
+    database_index = list(map(lambda x: x.split(" ")[0],database['Date'].tolist()))
+    database["Date"] = database_index
+    database.set_index("Date", inplace=True)
+    #database.sort_index(inplace=True)
+
+    orders = pd.DataFrame()
     root = "StatArb/ADF_Cointegrated"
 
     print(root)
@@ -211,12 +219,12 @@ if __name__ == '__main__':
         pairs.append(process_pair(pair_set))
 
     for pair in pairs:
-        instructions = pair_to_database(pair)
+        instructions = pair_to_orders(pair)
 
-    database.sort_index(inplace=True)
-    print(database)
-    database_index = database.index
-    run_timeline(database,database_index[0],database_index[-1])
+    orders.sort_index(inplace=True)
+    print(orders)
+    orders_index = orders.index
+    run_timeline(orders,orders_index[0],orders_index[-1])
     
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
