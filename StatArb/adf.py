@@ -30,7 +30,7 @@ if not os.path.exists("spy.csv"):
     # get_spy_data()
     pass
 
-spy = pd.read_csv(os.path.join(root,csv_path))
+spy = pd.read_csv(os.path.join(root, csv_path))
 spy.dropna(how="any", axis=1)
 
 tickers = [i for i in spy.columns]
@@ -146,10 +146,10 @@ def main(bound=len(tickers)):
     print(data)
     data.dropna(axis=0, inplace=True)
     print(data)
-    data.to_csv(os.path.join(dest_coint, "coint.csv"))
+    data.to_csv(os.path.join(root, dest_coint, "coint.csv"), index=False)
 
     print(f"Completed program. Took {time.time()-start_time} seconds.")
 
 
 if __name__ == "__main__":
-    main()
+    main(20)
