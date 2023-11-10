@@ -19,7 +19,8 @@ def get_settings():
     # "C_TYPE": "FLAT",
     # "C_TYPE": "PERCENT",
     "C_TYPE": "NONE",
-    "INITIAL_CAPITAL": 100000
+    "INITIAL_CAPITAL": 100000,
+    "HOLDING_PERIOD":15
     }
     return settings
 

@@ -3,7 +3,7 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import pytz
 from ecm import Pair
-
+from collections import defaultdict
 
 def get_market_start_date(days_ago=50, end_date=datetime.now(), return_type="str"):
     # assumes that each stock is listed on either NYSE or Nasdaq, which follow the same schedule
@@ -82,6 +82,58 @@ def process_pair(pair, start_date, end_date) -> Pair:
 
     return pair
 
+"""
+For stock in position:
+    For quantity,day_bought in zip(day_tracker[stock]):
+        if day_bought-delta >= MAXPERIOD:
+            sell
+
+Selling from z-score
+
+For stock in position:
+    keep subtracting quantity and popleft until quantity = 0,
+"""
+
+
+def check_hold(day_tracker: defaultdict(list), positions: dict, cur_day:int, MAXHOLD:int):
+    # We use day number rather than time.strptime datetime object because strptime and timedelta is slower
+    for stock in positions.keys():
+        slice_idx = 0
+        for quantity, day_bought in day_tracker[stock]:
+            if cur_day - day_bought > MAXHOLD:
+                break  # exit for-loop, slice list, then go to next stock
+
+            slice_idx += 1
+
+        if slice_idx >= len(day_tracker[stock]):
+            del day_tracker[stock]
+
+        else:
+            day_tracker[stock] = day_tracker[stock][slice_idx:]
+
+
+def add_to_daytracker(daytracker: defaultdict(list), quantity: int, ticker: str, cur_day:int):
+    daytracker[ticker].append([quantity, cur_day])
+
+
+def remove_from_daytracker(stock: str, quantity:int, day_tracker: defaultdict(list)):
+    # updates when stock is sold
+    slice_idx = 0
+    while quantity > 0:
+        # decrease quantity as we take off stocks
+        # stocks should already be in descending order in # days held
+        for qty, day_bought in zip(day_tracker[stock]):
+            if qty <= quantity:
+                quantity -= qty
+                slice_idx += 1
+            else:
+                day_tracker[stock] = [[qty - quantity][day_bought]].extend(day_tracker[slice_idx+1:])
+
+def get_buy_size(dollars,price,partial = False):
+    if partial:
+        return price/dollars
+    else:
+        return price//dollars
 
 """
 def get_valid_times(start_time = datetime.now(),market_exchange='NYSE',length=None):
