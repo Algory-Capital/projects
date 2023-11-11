@@ -84,7 +84,7 @@ def process_pair(pair, start_date, end_date) -> Pair:
 
 """
 For stock in position:
-    For quantity,day_bought in zip(day_tracker[stock]):
+    For quantity,day_bought in zip(daytracker[stock]):
         if day_bought-delta >= MAXPERIOD:
             sell
 
@@ -95,39 +95,55 @@ For stock in position:
 """
 
 
-def check_hold(day_tracker: defaultdict(list), positions: dict, cur_day:int, MAXHOLD:int):
+def check_hold(daytracker: defaultdict(list), positions: dict, cur_day:int, MAXHOLD:int) -> list: # we need to actually sell it
+    """
+    Sells when reaches a holding period MAXHOLD
+
+    To-do: have market_tester act upon to sell
+    """
     # We use day number rather than time.strptime datetime object because strptime and timedelta is slower
+    print(daytracker)
+    to_sell = [] # stores instructions for stocks to sell
     for stock in positions.keys():
-        slice_idx = 0
-        for quantity, day_bought in day_tracker[stock]:
-            if cur_day - day_bought > MAXHOLD:
+        stock_qty = 0
+        for quantity, day_bought in daytracker[stock]:
+            if cur_day - day_bought < MAXHOLD:
                 break  # exit for-loop, slice list, then go to next stock
+                
+            stock_qty += quantity
 
-            slice_idx += 1
+        to_sell.append(["SELL",stock,quantity])
 
-        if slice_idx >= len(day_tracker[stock]):
-            del day_tracker[stock]
-
-        else:
-            day_tracker[stock] = day_tracker[stock][slice_idx:]
+    return to_sell
 
 
 def add_to_daytracker(daytracker: defaultdict(list), quantity: int, ticker: str, cur_day:int):
+    print(daytracker,type(daytracker))
     daytracker[ticker].append([quantity, cur_day])
+    return daytracker
 
 
-def remove_from_daytracker(stock: str, quantity:int, day_tracker: defaultdict(list)):
+def remove_from_daytracker(stock: str, quantity:int, daytracker: defaultdict(list)):
+    """
+    Called when a stock is sold from market_tester. Removes stocks from daytracker based on earliest date bought
+    and quantity sold in instructions
+    """
+    print(daytracker)
     # updates when stock is sold
     slice_idx = 0
-    while quantity > 0:
-        # decrease quantity as we take off stocks
-        # stocks should already be in descending order in # days held
-        for qty, day_bought in zip(day_tracker[stock]):
-            if qty <= quantity:
-                quantity -= qty
-                slice_idx += 1
-            else:
-                day_tracker[stock] = [[qty - quantity][day_bought]].extend(day_tracker[slice_idx+1:])
+
+    # decrease quantity as we take off stocks
+    # stocks should already be in descending order in # days held
+    for qty, day_bought in daytracker[stock]:
+        if quantity == 0:
+            break
+        if qty <= quantity:
+            quantity -= qty
+            slice_idx += 1
+        else:
+            daytracker[stock] = [[qty - quantity][day_bought]].extend(daytracker[slice_idx+1:])
+
+    return daytracker
 
 def get_buy_size(dollars,price,partial = False):
     if partial:
