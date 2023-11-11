@@ -9,7 +9,13 @@ import pandas as pd
 import os
 from ecm import Pair
 import matplotlib.pyplot as plt
-from helper import series_index_to_dates, process_pair,check_hold,add_to_daytracker,remove_from_daytracker
+from helper import (
+    series_index_to_dates,
+    process_pair,
+    check_hold,
+    add_to_daytracker,
+    remove_from_daytracker,
+)
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
@@ -34,6 +40,7 @@ HOLDING_PERIOD = settings["HOLDING_PERIOD"]
 current_capital = settings["INITIAL_CAPITAL"]
 
 day_number = 0
+
 
 class Trade:
     def __init__(self, trade_id, symbol, quantity, price, timestamp, type):
@@ -93,8 +100,8 @@ def portfolio_value():
     return total_value
 
 
-def buy_stock(symbol, quantity, price, timestamp:str): # 2018-06-20 
-    global current_capital,day_number,daytracker  # Declare global to update the outer variable
+def buy_stock(symbol, quantity, price, timestamp: str):  # 2018-06-20
+    global current_capital, day_number, daytracker  # Declare global to update the outer variable
     new_trade = Trade(
         len(trades_made),
         symbol=symbol,
@@ -103,6 +110,12 @@ def buy_stock(symbol, quantity, price, timestamp:str): # 2018-06-20
         timestamp=timestamp,
         type="buy",
     )
+
+    if quantity == 0:
+        # since we are portion-sizing based on USD, there is a chance we get quantity of zero
+        # avoid division by zero
+        return
+
     if current_capital >= (quantity * price + calculate_commission(new_trade)):
         trades_made.append(new_trade)
 
@@ -117,8 +130,8 @@ def buy_stock(symbol, quantity, price, timestamp:str): # 2018-06-20
             ) / (positions[symbol]["quantity"] + quantity)
         else:
             positions[symbol] = {"quantity": quantity, "avg_price": price}
-        
-        daytracker = add_to_daytracker(daytracker,quantity,symbol,day_number)
+
+        daytracker = add_to_daytracker(daytracker, quantity, symbol, day_number)
 
         current_capital -= total_cost
     else:
@@ -134,7 +147,7 @@ def sell_stock(symbol, quantity, price, timestamp):
         timestamp=timestamp,
         type="sell",
     )
-    global current_capital,daytracker  # Declare global to update the outer variable
+    global current_capital, daytracker  # Declare global to update the outer variable
 
     if (
         new_trade.symbol in positions
@@ -145,7 +158,7 @@ def sell_stock(symbol, quantity, price, timestamp):
 
         # Update position
         positions[new_trade.symbol]["quantity"] -= quantity
-        daytracker = remove_from_daytracker(symbol,quantity,daytracker)
+        daytracker = remove_from_daytracker(symbol, quantity, daytracker)
 
         # Check if all shares are sold for this position
         if positions[new_trade.symbol]["quantity"] == 0:
@@ -175,7 +188,7 @@ def run_daily_instructions(current_day: str, instructions=list[list]):
             print("CURRENT DATE", current_day, type(current_day))
 
             # current_date_str = current_day.strftime("%Y-%m-%d %H:%M:%S")
-
+            print(instructions)
             print(database.loc[current_day][symbol])
             price = float(database.loc[current_day][symbol])
 
@@ -200,7 +213,7 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     start_date = datetime.datetime.strptime(start_date, format)
     end_date = datetime.datetime.strptime(end_date, format)
     to_sell = []
-    global day_number,daytracker
+    global day_number, daytracker
 
     # Set the 'Date' column as the index
     # database.set_index("Date", inplace=True)
@@ -220,9 +233,11 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
             type(instructions.index[0]),
             instructions.index[-1],
         )
-        to_sell = check_hold(daytracker,positions,day_number,HOLDING_PERIOD)
-        print(instructions.values.tolist(),to_sell)
-        run_daily_instructions(current_date, instructions.values.tolist() + to_sell)
+        to_sell = check_hold(daytracker, positions, day_number, HOLDING_PERIOD)
+        print("VAlues: ", instructions.values.tolist(), to_sell)
+        run_daily_instructions(
+            current_date, instructions.values.tolist() + to_sell
+        )  # scuffed af
         print(current_date)
         """except Exception as e:
             print(f"No data available for {current_date}, Error: {e}")
@@ -239,7 +254,8 @@ def plot_all(df: pd.DataFrame):
     # create df by calling portfolio_value() every day
     pass
 
-def save_portfolio_value(series:pd.Series):
+
+def save_portfolio_value(series: pd.Series):
     series[len(series)] = portfolio_value()
     return series
 
@@ -292,23 +308,25 @@ if __name__ == "__main__":
 
     print("Converting orders to pairs")
     for pair in tqdm(pairs):
-        instructions = pair_to_orders(pair)  # populate orders dataframe 
+        instructions = pair_to_orders(pair)  # populate orders dataframe
 
     print("Finished converting orders to pairs")
     orders.sort_index(inplace=True)
     print(orders)
-    orders.to_csv("orders.csv", index=True)
-    database.to_csv("database.csv", index=True)
+    # orders.to_csv("orders.csv", index=True)
+    # database.to_csv("database.csv", index=True)
     orders_index = orders.index
     print(orders_index[-1], type(orders_index[-1]))
-    print(daytracker,type(daytracker))
+    print(daytracker, type(daytracker))
     run_timeline(orders, orders_index[0], orders_index[-1])
 
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
     print("Positions:", positions)
-    print(f"Day tracker: ", daytracker)
+    # print(f"Day tracker: ", daytracker)
 
-    time_diff = time.time()-start_time
+    time_diff = time.time() - start_time
 
-    print(f"Done. Took {time_diff} seconds. Average {time_diff/len(pairs)} seconds per pair.")
+    print(
+        f"Done. Took {time_diff} seconds. Average {time_diff/len(pairs)} seconds per pair."
+    )

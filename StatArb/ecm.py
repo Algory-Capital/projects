@@ -286,17 +286,25 @@ class Pair:
         return (diff_test, ecm_model_fit)
 
     def calculate_instruction(
-        self, z_score, enter_position_z=3, exit_position_z=1
+        self,
+        z_score,
+        priceX,
+        priceY,
+        enter_position_z=3,
+        exit_position_z=1,
+        dollar_allocation=1000,
     ):  # called by calculate_z_score
         """
         Needs to inverse order for other side
+        Need to add buy put
+        Portion sizing
         """
 
         print(z_score)
 
         instruction = [
-            [None, self.stock1, 10],
-            [None, self.stock2, 10],
+            [None, self.stock1, get_buy_size(dollar_allocation, priceX)],
+            [None, self.stock2, get_buy_size(dollar_allocation, priceY)],
         ]  # buy/sell, ticker, quantity
 
         if z_score < 0:
@@ -355,7 +363,9 @@ class Pair:
 
         self.z_scores.append(z_score)
 
-        self.calculate_instruction(z_score)  # based on calculated z_score
+        self.calculate_instruction(
+            z_score, priceX, priceY
+        )  # based on calculated z_score
 
     def plot_ecm(*func):
         def wrapper():
@@ -374,6 +384,13 @@ class Pair:
             self.predictors,
         )
         print("done")
+
+
+def get_buy_size(dollar_allocation, stock_price, partial=False):
+    if partial:
+        return dollar_allocation / stock_price
+    else:
+        return int(dollar_allocation // stock_price)
 
 
 if __name__ == "__main__":
