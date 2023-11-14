@@ -1,3 +1,5 @@
+import cProfile
+
 import time
 import yfinance as yf
 import csv
@@ -263,6 +265,7 @@ def save_portfolio_value(series: pd.Series):
 # does not account for stock splits
 # database currently contains stocks from current s&p 500, if stocks leave/rejoin it gets weird
 if __name__ == "__main__":
+
     start_time = time.time()
     start_date = "2018-06-12"
     end_date = "2022-01-01"
