@@ -43,8 +43,10 @@ def binomial_tree_and_option_price(initial_price, strike_price, option_type='put
     return option_values[0, 0]
 
 #This implementation 
-# 1. defaults to puts
-# 2. assumes strike_price = stock_price
+# 1. defaults to puts (get_option_price)
+# 2. assumes strike_price = stock_price (get_option_price)
+# 3. assumes 2 week maturity date (settings)
+# 4. assumes neutral risk stock movement (by nature of the model)
 
 
 def get_option_price(stock_price, option_type='put'):
@@ -56,8 +58,3 @@ def get_option_price(stock_price, option_type='put'):
         print(f"Call Option Price: {result:.2f}")
     return result
 
-# Example usage for a put option
-get_option_price(370.72)
-
-# Example usage for a call option
-get_option_price(370.72, option_type='call')
