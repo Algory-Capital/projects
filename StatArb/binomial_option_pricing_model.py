@@ -52,9 +52,5 @@ def binomial_tree_and_option_price(initial_price, strike_price, option_type='put
 def get_option_price(stock_price, option_type='put'):
     strike_price = stock_price
     result = binomial_tree_and_option_price(stock_price, strike_price, option_type)
-    if option_type == 'put':
-        print(f"Put Option Price: {result:.2f}")
-    elif option_type == 'call':
-        print(f"Call Option Price: {result:.2f}")
     return result
 
