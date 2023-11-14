@@ -1,61 +1,63 @@
 import numpy as np
 
-# ASSUMPTIONS OF THIS MODEL
-# 1 Risk-Neutral Probability of stock moving: Price can move in any direction
-# 2 Put can be exercised at any point - American
-# 3 For our model, Strike Price = initial stock price
+settings = {
+    'T': 2 / 52,        # time to maturity in years
+    'r': 0.0446,        # risk-free interest rate
+    'sigma': 0.2,       # volatility of stock
+    'N': 5              # number of nodes in tree
+}
 
-def build_tree(initial_price, r, sigma, T, N):
+def binomial_tree_and_option_price(initial_price, strike_price, option_type='put'):
+    T, r, sigma, N = settings.values()
     dt = T / N  # length of each period
-
     u = np.exp(sigma * np.sqrt(dt))
     d = np.exp(-sigma * np.sqrt(dt))
     p = (np.exp(r * dt) - d) / (u - d)  # risk-neutral probability of up move
 
     # Create the binomial tree for the stock price
-    S = np.zeros((N + 1, N + 1))  # initialize the stock price matrix
-    S[0, 0] = initial_price  # set the initial stock price
-
-    for i in range(1, N + 1):  # loop over the periods
-        for j in range(i + 1):  # loop over the nodes
-            S[j, i] = S[0, 0] * (u ** (i - j)) * (d ** j)  # calculate the stock price at each node
-
-    return S
-
-def put_option_price(stock_price, strike_price, r, T, N, sigma):
-    dt = T / N  # length of each period
+    S = np.zeros((N + 1, N + 1))
+    S[0, 0] = initial_price
 
     option_values = np.zeros((N + 1, N + 1))
 
+    for i in range(1, N + 1):
+        for j in range(i + 1):
+            S[j, i] = S[0, 0] * (u ** (i - j)) * (d ** j)  # calculate the stock price at each node
+
     # Calculate option values at maturity
     for j in range(N + 1):
-        option_values[j, N] = max(0, strike_price - stock_price[j, N])
+        if option_type == 'put':
+            option_values[j, N] = max(0, strike_price - S[j, N])
+        elif option_type == 'call':
+            option_values[j, N] = max(0, S[j, N] - strike_price)
 
     # Backward induction to calculate option values at previous nodes
+    # I'm ngl I used ChatGPT for this since it had to be dynamic programming for efficiency
     for i in range(N - 1, -1, -1):
         for j in range(i + 1):
-            intrinsic_value = max(0, strike_price - stock_price[j, i])
+            intrinsic_value = max(0, strike_price - S[j, i]) if option_type == 'put' else max(0, S[j, i] - strike_price)
             continuation_value = np.exp(-r * dt) * (
                     p * option_values[j, i + 1] + (1 - p) * option_values[j + 1, i + 1])
             option_values[j, i] = max(intrinsic_value, continuation_value)
 
     return option_values[0, 0]
 
-def get_option_price(stock_price):
+#This implementation 
+# 1. defaults to puts
+# 2. assumes strike_price = stock_price
 
 
-    #modifyable settings
-    stock_price = 370.2
+def get_option_price(stock_price, option_type='put'):
     strike_price = stock_price
-    T = 1  # time to maturity in years
-    r = 0.0446  # risk-free interest rate - manually gotten
-    sigma = 0.2  # volatility of the stock
-    N = 10
-    stock_price_tree = build_tree(strike_price, r, sigma, T, N)
-
-    result = put_option_price(stock_price_tree, strike_price, r, T, N, sigma)
-    print(f"Put Option Price: {result:.2f}")
-
+    result = binomial_tree_and_option_price(stock_price, strike_price, option_type)
+    if option_type == 'put':
+        print(f"Put Option Price: {result:.2f}")
+    elif option_type == 'call':
+        print(f"Call Option Price: {result:.2f}")
     return result
 
+# Example usage for a put option
+get_option_price(370.72)
 
+# Example usage for a call option
+get_option_price(370.72, option_type='call')
