@@ -4,6 +4,7 @@ import pandas_market_calendars as mcal
 import pytz
 from ecm import Pair
 from collections import defaultdict
+import numpy as np
 
 
 def get_market_start_date(days_ago=50, end_date=datetime.now(), return_type="str"):
@@ -110,7 +111,7 @@ def check_hold(
     to_sell = []  # stores instructions for stocks to sell
     for stock in positions.keys():
         stock_qty = 0
-        for quantity, day_bought in daytracker[stock]:
+        for quantity, day_bought,price in daytracker[stock]:
             if cur_day - day_bought < MAXHOLD:
                 break  # exit for-loop, generate order, then move to next stock
 
@@ -123,10 +124,10 @@ def check_hold(
 
 
 def add_to_daytracker(
-    daytracker: defaultdict(list), quantity: int, ticker: str, cur_day: int
+    daytracker: defaultdict(list), quantity: int, ticker: str, cur_day: int, price: int
 ):
     print(daytracker, type(daytracker))
-    daytracker[ticker].append([quantity, cur_day])
+    daytracker[ticker].append([quantity, cur_day,price])
     return daytracker
 
 
@@ -134,6 +135,8 @@ def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(li
     """
     Called when a stock is sold from market_tester. Removes stocks from daytracker based on earliest date bought
     and quantity sold in instructions
+
+    Need a different way to remove when stop-loss
     """
     print(daytracker)
     # updates when stock is sold
@@ -141,7 +144,7 @@ def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(li
 
     # decrease quantity as we take off stocks
     # stocks should already be in descending order in # days held
-    for qty, day_bought in daytracker[stock]:
+    for qty, day_bought, price in daytracker[stock]:
         if quantity == 0:
             break
         if qty <= quantity:
@@ -154,6 +157,27 @@ def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(li
 
     return daytracker
 
+def check_stop_loss(daytracker: defaultdict(list),positions:dict,database:pd.DataFrame,day_number: int,z_score=13,sigma):
+    """
+    Day_number is int not strftime string
+    Be careful about duplicates. For now, am calling run_daily instructions and updating daytracker twice per day
+    Daytracker item format: [qty,day_bought,price]
+
+    We need to restructure to get spread (sigma in here). Or, we can store as a separate dataframe
+    """
+    # np.where?
+    to_sell = []  # stores instructions for stocks to sell
+    for col_num,stock in enumerate(positions.keys()):
+        cur_price = database.iloc[day_number,col_num]
+        sell_threshold = cur_price - z_score * sigma
+        stock_qty = 0
+        for quantity, day_bought,price in daytracker[stock]:
+            #exceed = np.where(item[2]<sell_threshold,item)
+            if price < sell_threshold:
+                stock_qty += quantity
+        to_sell.append(["SELL", stock, stock_qty])
+
+    return [to_sell]
 
 """
 def get_valid_times(start_time = datetime.now(),market_exchange='NYSE',length=None):
