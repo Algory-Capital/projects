@@ -6,6 +6,13 @@ from ecm import Pair
 from collections import defaultdict
 import numpy as np
 
+def slice_database_by_dates(database,start_date,end_date):
+    print(database.index)
+    start_index = np.where(database.index == start_date)[0]
+    end_index = np.where(database.index == end_date)[0]
+
+    database = database[start_index:end_index+1]
+    return database
 
 def get_market_start_date(days_ago=50, end_date=datetime.now(), return_type="str"):
     # assumes that each stock is listed on either NYSE or Nasdaq, which follow the same schedule
@@ -21,6 +28,19 @@ def get_market_start_date(days_ago=50, end_date=datetime.now(), return_type="str
         # Format: year-month-day
     return date
 
+def get_market_end_date(end_date:str, change_days=1, return_type="str"):
+    # assumes that each stock is listed on either NYSE or Nasdaq, which follow the same schedule
+    nyse = mcal.get_calendar("NYSE")
+    date = pd.to_datetime(
+        end_date
+    ) + pd.tseries.offsets.CustomBusinessDay(
+        change_days, holidays=nyse.holidays().holidays
+    )
+    if return_type == "str":
+        date = date.strftime("%Y-%m-%d")
+        # "2002-01-01"
+        # Format: year-month-day
+    return date
 
 def get_market_valid_times(
     length=50, start_date: str = None, end_date=datetime.now()
@@ -157,7 +177,23 @@ def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(li
 
     return daytracker
 
-def check_stop_loss(daytracker: defaultdict(list),positions:dict,database:pd.DataFrame,day_number: int,z_score=13,sigma):
+def remove_stop_loss_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(list)):
+    """
+    Approach: 
+    While quantity is > 0, remove items via np.argmax and update quantity.
+    Return updated daytracker
+    j = [[1,6,2],[1,5,8],[2,7,1]]
+    j = np.array(j)[:,-1]
+    """
+    quantity_array = np.array(daytracker[stock][:,-1])
+    while quantity > 0:
+        stop_loss_index = np.argmax(quantity_array)
+        quantity -= quantity_array[stop_loss_index]
+        np.delete(quantity_array,stop_loss_index)
+        daytracker[stock] = daytracker[stock].pop(stop_loss_index)
+        # np.delete
+
+def check_stop_loss(daytracker: defaultdict(list),positions:dict,database:pd.DataFrame,day_number: int,stddev,z_score=13):
     """
     Day_number is int not strftime string
     Be careful about duplicates. For now, am calling run_daily instructions and updating daytracker twice per day
@@ -169,7 +205,7 @@ def check_stop_loss(daytracker: defaultdict(list),positions:dict,database:pd.Dat
     to_sell = []  # stores instructions for stocks to sell
     for col_num,stock in enumerate(positions.keys()):
         cur_price = database.iloc[day_number,col_num]
-        sell_threshold = cur_price - z_score * sigma
+        sell_threshold = cur_price - z_score * stddev
         stock_qty = 0
         for quantity, day_bought,price in daytracker[stock]:
             #exceed = np.where(item[2]<sell_threshold,item)

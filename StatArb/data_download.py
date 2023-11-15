@@ -11,7 +11,7 @@ import os
 root = "StatArb"
 
 
-def get_spy_data():
+def get_spy_data(start_date = "2018-1-1",end_date = "2023-11-1"):
     class CachedLimiterSession(
         CacheMixin, LimiterMixin, Session
     ):  # inherits three classes
@@ -32,16 +32,19 @@ def get_spy_data():
 
     spy_data = yf.download(
         tickers.Symbol.to_list(),
-        start="2018-1-1",
-        end="2023-11-1",
+        start=start_date,
+        end=end_date,
         period="1d",
         auto_adjust=True,
         session=session,
     )["Close"]
     # Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo Intraday data cannot extend last 60 days
+    spy_data.dropna(axis=1,how="any",inplace=True)
+    print(start_date,end_date)
     print(spy_data.head())
+    print(spy_data.tail())
 
-    spy_data.to_csv(os.path.join(root, "super_spy.csv"), index=True)
+    spy_data.to_csv(os.path.join(root, "spy.csv"), index=True)
 
 
 if __name__ == "__main__":

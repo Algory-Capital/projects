@@ -17,6 +17,9 @@ from helper import (
     check_hold,
     add_to_daytracker,
     remove_from_daytracker,
+    get_market_valid_times, 
+    slice_database_by_dates,
+    get_market_end_date
 )
 import numpy as np
 from tqdm import tqdm
@@ -67,11 +70,11 @@ def pair_to_orders(pair: Pair):
 
         #trade_instruction = Trade("",ticker,quantity,None,None,None)
         database.iloc[len(database.index)] = instruction"""
-    global orders
+    global orders,orders_index
 
-    instructions = pd.Series(pair.instructions, name=pair.name)
+    instructions = pd.Series(pair.instructions, name=pair.name,index=orders_index)
     print(pair.start_date, pair.end_date)
-    instructions = series_index_to_dates(instructions, pair.start_date, pair.end_date)
+    #instructions = series_index_to_dates(instructions, pair.start_date, pair.end_date)
 
     orders = orders.merge(instructions, how="outer", left_index=True, right_index=True)
     print(orders)
@@ -239,7 +242,8 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
         print("VAlues: ", instructions.values.tolist(), to_sell)
         run_daily_instructions(
             current_date, instructions.values.tolist() + to_sell
-        )  # scuffed af
+        ) 
+        portfolio_history = save_portfolio_value(portfolio_history)
         print(current_date)
         """except Exception as e:
             print(f"No data available for {current_date}, Error: {e}")
@@ -249,15 +253,17 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     return None
 
 
-def plot_all(df: pd.DataFrame):
+def plot_all(series: pd.Series):
     fig = plt.figure()
     ax = fig.gca()
-    df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
+    fig.plot(database.index,series.values())
+    #df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
     # create df by calling portfolio_value() every day
     pass
 
 
 def save_portfolio_value(series: pd.Series):
+    #global portfolio_history
     series[len(series)] = portfolio_value()
     return series
 
@@ -265,19 +271,13 @@ def save_portfolio_value(series: pd.Series):
 # does not account for stock splits
 # database currently contains stocks from current s&p 500, if stocks leave/rejoin it gets weird
 if __name__ == "__main__":
-
+    portfolio_history = pd.Series()
     start_time = time.time()
     start_date = "2018-06-12"
-    end_date = "2022-01-01"
-    """
-    # database_csv = data_download.download_stock_data(start_date= start_date, end_date= end_date)
-    database_csv = f"s&p500 {start_date} to {end_date}.csv"
+    end_date = "2022-01-03"
 
-    database = pd.read_csv(database_csv)
-    database['Date'] = pd.to_datetime(database['Date'])
-
-
-    run_timeline(database, start_date, end_date)"""
+    get_spy_data(start_date=start_date,end_date=get_market_end_date(end_date=end_date)) # We need to call market_end_date since yfinance doesn't download the last day
+    # https://github.com/ranaroussi/yfinance/issues/1445
 
     root = "StatArb"
     csv_path = "spy.csv"
@@ -285,6 +285,8 @@ if __name__ == "__main__":
     database_index = list(map(lambda x: x.split(" ")[0], database["Date"].tolist()))
     database["Date"] = database_index
     database.set_index("Date", inplace=True)
+
+    database = slice_database_by_dates(database=database,start_date=start_date,end_date=end_date)
 
     print(database, database.index, type(database.index[0]))
     # database.sort_index(inplace=True)
@@ -309,6 +311,7 @@ if __name__ == "__main__":
     for pair_set in tqdm(coint_pairs):
         pairs.append(process_pair(pair_set, start_date, end_date))
 
+    orders_index = get_market_valid_times(start_date,end_date)
     print("Converting orders to pairs")
     for pair in tqdm(pairs):
         instructions = pair_to_orders(pair)  # populate orders dataframe
@@ -318,8 +321,8 @@ if __name__ == "__main__":
     print(orders)
     # orders.to_csv("orders.csv", index=True)
     # database.to_csv("database.csv", index=True)
-    orders_index = orders.index
-    print(orders_index[-1], type(orders_index[-1]))
+    #orders_index = orders.index
+    #print(orders_index[-1], type(orders_index[-1]))
     print(daytracker, type(daytracker))
     run_timeline(orders, orders_index[0], orders_index[-1])
 
