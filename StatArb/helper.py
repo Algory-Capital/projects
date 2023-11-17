@@ -55,12 +55,16 @@ def get_market_valid_times(
     dates = []
 
     nyse = mcal.get_calendar("NYSE")
-    for _ in range(length):
-        date = date + pd.tseries.offsets.CustomBusinessDay(
-            1, holidays=nyse.holidays().holidays
-        )
-        new_date = date.strftime("%Y-%m-%d")
-        dates.append(new_date)
+    #replaced this for optimization reasons
+    # for _ in range(length):
+    #     date = date + pd.tseries.offsets.CustomBusinessDay(
+    #         1, holidays=nyse.holidays().holidays
+    #     )
+    #     new_date = date.strftime("%Y-%m-%d")
+    #     dates.append(new_date)
+
+    custom_bday = pd.tseries.offsets.CustomBusinessDay(1, holidays=nyse.holidays().holidays)
+    dates = [date.strftime("%Y-%m-%d") for _ in range(length) if (date := date + custom_bday)]
 
     return dates
 
