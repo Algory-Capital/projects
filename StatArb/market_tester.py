@@ -17,9 +17,9 @@ from helper import (
     check_hold,
     add_to_daytracker,
     remove_from_daytracker,
-    get_market_valid_times, 
+    get_market_valid_times,
     slice_database_by_dates,
-    get_market_end_date
+    get_market_end_date,
 )
 import numpy as np
 from tqdm import tqdm
@@ -70,15 +70,16 @@ def pair_to_orders(pair: Pair):
 
         #trade_instruction = Trade("",ticker,quantity,None,None,None)
         database.iloc[len(database.index)] = instruction"""
-    global orders,orders_index
+    global orders, orders_index
 
-    instructions = pd.Series(pair.instructions, name=pair.name,index=orders_index)
-    print(pair.start_date, pair.end_date)
-    #instructions = series_index_to_dates(instructions, pair.start_date, pair.end_date)
+    instructions = pd.Series(pair.instructions, name=pair.name, index=orders_index)
+    print(len(instructions))
+    # print(pair.start_date, pair.end_date)
+    # instructions = series_index_to_dates(
+    #    instructions, pair.start_date, pair.end_date, orders_index
+    # )
 
     orders = orders.merge(instructions, how="outer", left_index=True, right_index=True)
-    print(orders)
-    print(orders.index, type(orders.index[0]))
 
 
 def calculate_commission(trade):
@@ -136,7 +137,7 @@ def buy_stock(symbol, quantity, price, timestamp: str):  # 2018-06-20
         else:
             positions[symbol] = {"quantity": quantity, "avg_price": price}
 
-        daytracker = add_to_daytracker(daytracker, quantity, symbol, day_number)
+        daytracker = add_to_daytracker(daytracker, quantity, symbol, day_number, price)
 
         current_capital -= total_cost
     else:
@@ -180,7 +181,7 @@ def sell_stock(symbol, quantity, price, timestamp):
 
 
 def run_daily_instructions(current_day: str, instructions=list[list]):
-    print(instructions, type(instructions))
+    # print(instructions, type(instructions))
     # Name: 2018-06-20, dtype: object [list([None, 'ADI', 10]) list([None, 'AJG', 10])] <class 'numpy.ndarray'> Index(['A ADI', 'A AJG'], dtype='object') <class 'str'> A AJG
 
     # [list([None, 'ADI', 10]) list([None, 'AJG', 10])] <class 'numpy.ndarray'>
@@ -218,33 +219,31 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     start_date = datetime.datetime.strptime(start_date, format)
     end_date = datetime.datetime.strptime(end_date, format)
     to_sell = []
-    global day_number, daytracker
+    global day_number, daytracker, portfolio_history
 
     # Set the 'Date' column as the index
     # database.set_index("Date", inplace=True)
     # database.sort_index(inplace=True)
 
-    for current_date in orders.index:  # fix
+    for current_date in tqdm(orders.index):  # fix
         # Check if the date exists in the index
         # try:
         day_number += 1
         data_rows = orders.loc[current_date]
         instructions = data_rows
-        print(
+        """print(
             instructions,
             instructions.values,
             type(instructions.values),
             instructions.index,
             type(instructions.index[0]),
             instructions.index[-1],
-        )
+        )"""
         to_sell = check_hold(daytracker, positions, day_number, HOLDING_PERIOD)
-        print("VAlues: ", instructions.values.tolist(), to_sell)
-        run_daily_instructions(
-            current_date, instructions.values.tolist() + to_sell
-        ) 
+        # print("VAlues: ", instructions.values.tolist(), to_sell)
+        run_daily_instructions(current_date, instructions.values.tolist() + to_sell)
         portfolio_history = save_portfolio_value(portfolio_history)
-        print(current_date)
+        # print(current_date)
         """except Exception as e:
             print(f"No data available for {current_date}, Error: {e}")
             print(current_date, current_date, orders.loc[current_date])
@@ -256,15 +255,15 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
 def plot_all(series: pd.Series):
     fig = plt.figure()
     ax = fig.gca()
-    fig.plot(database.index,series.values())
-    #df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
+    fig.plot(database.index, series.values())
+    # df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
     # create df by calling portfolio_value() every day
-    pass
+    fig.show()
 
 
 def save_portfolio_value(series: pd.Series):
-    #global portfolio_history
-    series[len(series)] = portfolio_value()
+    # global portfolio_history
+    series.at[len(series)] = portfolio_value()
     return series
 
 
@@ -276,7 +275,9 @@ if __name__ == "__main__":
     start_date = "2018-06-12"
     end_date = "2022-01-03"
 
-    get_spy_data(start_date=start_date,end_date=get_market_end_date(end_date=end_date)) # We need to call market_end_date since yfinance doesn't download the last day
+    get_spy_data(
+        start_date=start_date, end_date=get_market_end_date(end_date=end_date)
+    )  # We need to call market_end_date since yfinance doesn't download the last day
     # https://github.com/ranaroussi/yfinance/issues/1445
 
     root = "StatArb"
@@ -286,15 +287,17 @@ if __name__ == "__main__":
     database["Date"] = database_index
     database.set_index("Date", inplace=True)
 
-    database = slice_database_by_dates(database=database,start_date=start_date,end_date=end_date)
+    database = slice_database_by_dates(
+        database=database, start_date=start_date, end_date=end_date
+    )
 
-    print(database, database.index, type(database.index[0]))
+    # print(database, database.head(), database.tail(), len(database))
     # database.sort_index(inplace=True)
 
     orders = pd.DataFrame()
     root = "StatArb/ADF_Cointegrated"
 
-    print(root)
+    # print(root)
 
     if not os.path.exists(os.path.join(root, "coint.csv")):
         print("Coint csv not found, calling adf main. Input to continue")
@@ -311,19 +314,22 @@ if __name__ == "__main__":
     for pair_set in tqdm(coint_pairs):
         pairs.append(process_pair(pair_set, start_date, end_date))
 
-    orders_index = get_market_valid_times(start_date,end_date)
+    # orders_index = database.index
+    orders_index = get_market_valid_times(
+        len(pairs[0].instructions), start_date, end_date
+    )
     print("Converting orders to pairs")
     for pair in tqdm(pairs):
         instructions = pair_to_orders(pair)  # populate orders dataframe
 
     print("Finished converting orders to pairs")
     orders.sort_index(inplace=True)
-    print(orders)
+    # print(orders)
     # orders.to_csv("orders.csv", index=True)
     # database.to_csv("database.csv", index=True)
-    #orders_index = orders.index
-    #print(orders_index[-1], type(orders_index[-1]))
-    print(daytracker, type(daytracker))
+    # orders_index = orders.index
+    # print(orders_index[-1], type(orders_index[-1]))
+    # print(daytracker, type(daytracker))
     run_timeline(orders, orders_index[0], orders_index[-1])
 
     print(f"Current Capital: {float(current_capital):.2f}")

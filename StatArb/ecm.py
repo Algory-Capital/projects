@@ -86,7 +86,7 @@ class Pair:
         # print(data)
 
         self.data[close.name] = close
-        print(self.data)
+        # print(self.data)
 
         self.data["disequilibrium"] = self.get_disequilibrium()
         self.data["dates"] = self.dates
@@ -95,7 +95,7 @@ class Pair:
         self.data.set_index("dates", drop=True, inplace=True)
 
         self.start_date = self.data.index.values[0]
-        print(self.start_date)
+        # print(self.start_date)
 
         # diff everything
         self.diff_data = self.data.diff().dropna().reset_index(drop=True)
@@ -103,7 +103,7 @@ class Pair:
 
         self.diff_start_date = self.diff_data.index.values[0]
 
-        print(self.diff_data)
+        # print(self.diff_data)
 
         # These dataframes are used for testing rolling_ecm function. Probably temporary for now
         self.train_length = 50
