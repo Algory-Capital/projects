@@ -113,3 +113,4 @@ dist
 
 __pycache__/
 yfinance.cache
+StatArb/yfinance.cache

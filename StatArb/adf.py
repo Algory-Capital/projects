@@ -20,7 +20,7 @@ dest_coint = "ADF_Cointegrated"
 dest_not_coint = "ADF_Diff"
 csv_path = "spy.csv"
 max_processes = 24
-adf_percentage = "5%"
+adf_percentage = "1%"
 ###
 
 start_time = time.time()
@@ -152,4 +152,4 @@ def main(bound=len(tickers)):
 
 
 if __name__ == "__main__":
-    main(20)
+    main()

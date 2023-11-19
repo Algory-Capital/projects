@@ -4,13 +4,14 @@ import time
 import yfinance as yf
 import csv
 import datetime
-from data_download import get_spy_data
+from data_download import get_spy_data, get_spy_index_data
 import strategy as strategy
 import adf
 import pandas as pd
 import os
 from ecm import Pair
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from helper import (
     series_index_to_dates,
     process_pair,
@@ -252,13 +253,51 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     return None
 
 
+def pct_change(
+    x,
+    start,
+):
+    pass
+
+
 def plot_all(series: pd.Series):
-    fig = plt.figure()
-    ax = fig.gca()
-    fig.plot(database.index, series.values())
+    fig, ax1 = plt.subplots()
+    spy_data = get_spy_index_data(
+        start_date=start_date, end_date=get_market_end_date(end_date=end_date)
+    )
+    spy_data_normalized = spy_data.apply(lambda x: (x / (spy_data.iloc[0]) - 1) * 100)
+    series_data_normalized = series.apply(lambda x: (x / (series.iloc[0]) - 1) * 100)
+    # series_normalized = series.apply(lambda x: x.div(x.iloc[0].subtract(1).mul(100)))
+
+    ax1.plot(database.index, spy_data_normalized.values, label="SPY")
+
     # df.index = df.index.map(lambda time: time.strftime("%Y-%m-%d"))
     # create df by calling portfolio_value() every day
+    ax1.set_xlabel("Time")
+    ax1.set_ylabel("Percentage Returns")
+    ax1.yaxis.set_major_formatter(mtick.PercentFormatter())
+    ax1.set_title(f"StatArb: {start_date} - {end_date}")
+    # ax2 = ax1.twinx()
+    ax1.plot(
+        database.index[-len(series_data_normalized) :],
+        series_data_normalized.values,
+        label="StatArb",
+    )
+    # ax2.set_ylabel("Percentage Returns")
+    # ax2.yaxis.set_major_formatter(mtick.PercentFormatter())
+
+    every_nth = 200
+    for n, label in enumerate(ax1.xaxis.get_ticklabels()):
+        if n % every_nth != 0:
+            label.set_visible(False)
+
+    ax1.legend()
+    fig.tight_layout()
+
+    fig.savefig(os.path.join("StatArb", "Backtests", f"{start_date}_{end_date}.png"))
+
     fig.show()
+    time.sleep(10)
 
 
 def save_portfolio_value(series: pd.Series):
@@ -331,6 +370,7 @@ if __name__ == "__main__":
     # print(orders_index[-1], type(orders_index[-1]))
     # print(daytracker, type(daytracker))
     run_timeline(orders, orders_index[0], orders_index[-1])
+    print(portfolio_history)
 
     print(f"Current Capital: {float(current_capital):.2f}")
     print(f"Current Portfolio Value: {float(portfolio_value()):.2f}")
@@ -340,5 +380,7 @@ if __name__ == "__main__":
     time_diff = time.time() - start_time
 
     print(
-        f"Done. Took {time_diff} seconds. Average {time_diff/len(pairs)} seconds per pair."
+        f"Done. Took {time_diff:.2f} seconds. Average {time_diff/len(pairs):.2f} seconds per pair."
     )
+
+    plot_all(portfolio_history)
