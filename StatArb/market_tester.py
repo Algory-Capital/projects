@@ -95,15 +95,24 @@ def calculate_commission(trade):
 
 
 # calculates value for positions TO NOW
-def portfolio_value():
+def portfolio_value(latest=True):
     total_value = current_capital
-    for symbol, position in positions.items():
-        stock = yf.Ticker(symbol)
-        current_price = stock.history(period="1d")["Close"].iloc[-1]
+    if latest:
+        for symbol, position in positions.items():
+            stock = yf.Ticker(symbol)
+            current_price = stock.history(period="1d")["Close"].iloc[-1]
 
-        # Calculate the current value of the position
-        position_value = position["quantity"] * current_price
-        total_value += position_value
+            # Calculate the current value of the position
+            position_value = position["quantity"] * current_price
+            total_value += position_value
+    else:
+        global day_number
+        for symbol, position in positions.items():
+            current_price = database.iloc[day_number][symbol]
+
+            position_value = position["quantity"] * current_price
+            total_value += position_value
+
     return total_value
 
 
@@ -253,13 +262,6 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     return None
 
 
-def pct_change(
-    x,
-    start,
-):
-    pass
-
-
 def plot_all(series: pd.Series):
     fig, ax1 = plt.subplots()
     spy_data = get_spy_index_data(
@@ -300,9 +302,9 @@ def plot_all(series: pd.Series):
     time.sleep(10)
 
 
-def save_portfolio_value(series: pd.Series):
+def save_portfolio_value(series: pd.Series, latest=False):
     # global portfolio_history
-    series.at[len(series)] = portfolio_value()
+    series.at[len(series)] = portfolio_value(latest)
     return series
 
 
