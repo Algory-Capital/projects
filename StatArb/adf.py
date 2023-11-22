@@ -128,6 +128,7 @@ def main(bound=len(tickers)):
     results, coint = [], []
     total_operations = sum(i for i in range(bound))
     print(total_operations)
+    visited = set()
 
     pbar_results = tqdm(total=total_operations)
 
@@ -139,7 +140,12 @@ def main(bound=len(tickers)):
         for f in concurrent.futures.as_completed(results):
             print(f"RESULT: {f.result()}")
             if f.result() != "Not cointegrated":
-                coint.append(f.result())
+                # Prevent tickers from showing up in multiple pairs
+                cur_pair = f.result().split(", ")
+                if cur_pair[0] not in visited and cur_pair[1] not in visited:
+                    coint.append(f.result())
+                    visited.add(cur_pair[0])
+                    visited.add(cur_pair[1])
             pbar_results.update()
 
     data = pd.DataFrame(coint)
@@ -152,4 +158,4 @@ def main(bound=len(tickers)):
 
 
 if __name__ == "__main__":
-    main()
+    main(70)

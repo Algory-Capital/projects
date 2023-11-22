@@ -12,6 +12,7 @@ warnings.filterwarnings("ignore")
 import os
 from math import log
 import numpy as np
+from collections import defaultdict
 
 root = "StatArb"
 
@@ -22,6 +23,8 @@ spy = pd.read_csv(os.path.join(root, "spy.csv"))
 gammas = set()
 alphas = set()
 data = pd.DataFrame()
+
+stop_loss_thresholds = defaultdict(list)
 
 
 class Pair:
@@ -50,11 +53,10 @@ class Pair:
         self.history = pd.DataFrame()
         self.diff_history = pd.DataFrame()
 
-        # I don't know if splitting data into training and test is necessary for backtest
-
         self.instructions = []
         self.z_scores = []
         self.spreads = []
+        self.stddev = []
 
         self.get_data(t1, t2, 5, 5)
 
@@ -352,7 +354,7 @@ class Pair:
         stddev = np.std(self.spreads)
         mean = np.mean(
             self.spreads
-        )  # this mean is not rolling. Don't know if this is an issue
+        )  # this mean is not rolling. Some models may make it a rolling mean
 
         z_score = (spread - mean) / stddev
 
@@ -362,10 +364,18 @@ class Pair:
         print(self.spreads, stddev, mean, self.z_scores, z_score)
 
         self.z_scores.append(z_score)
+        self.stddev.append(stddev)
 
         self.calculate_instruction(
             z_score, priceX, priceY
         )  # based on calculated z_score
+
+        qty = self.instructions[-1][0][-1]
+
+        # Calling this for both stocks assumes that there are no tickers belonging to > 1 pair
+        # Alternative is to just exit check_stop_loss if finding empty defaultdict, but not sure which option is better
+        calculate_stop_loss_threshold(self.stock1, priceX, stddev, qty)
+        calculate_stop_loss_threshold(self.stock2, priceY, stddev, qty)
 
     def plot_ecm(*func):
         def wrapper():
@@ -376,6 +386,7 @@ class Pair:
     def pair_main(self):
         self.create_ecm()
         # y_var,X_vars,lr_X_vars = 'close',self.predictors,['close_market','const']
+
         self.diff_history, self.ecm_results = self.roll_forecast_ecm(
             self.data_train,
             self.data_test,
@@ -383,7 +394,6 @@ class Pair:
             self.diff_test,
             self.predictors,
         )
-        print("done")
 
 
 def get_buy_size(dollar_allocation, stock_price, partial=False):
@@ -391,6 +401,15 @@ def get_buy_size(dollar_allocation, stock_price, partial=False):
         return dollar_allocation / stock_price
     else:
         return int(dollar_allocation // stock_price)
+
+
+def calculate_stop_loss_threshold(stock, price, stddev, quantity, z_score=100):
+    threshold = price - z_score * stddev  # calculated threshold
+    stop_loss_thresholds[stock].append((threshold, quantity))
+
+
+def get_stop_loss_thresholds():
+    return stop_loss_thresholds
 
 
 if __name__ == "__main__":

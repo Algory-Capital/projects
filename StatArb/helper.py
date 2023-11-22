@@ -3,12 +3,12 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import pytz
 from ecm import Pair
-from collections import defaultdict
+from collections import defaultdict, deque
 import numpy as np
 
 
 def slice_database_by_dates(database, start_date, end_date):
-    # print(database.index)
+    # Does not have error handling. Must provide valid business days for both start_date and end_date
     start_index = np.where(database.index == start_date)[0][0]
     end_index = np.where(database.index == end_date)[0][0]
 
@@ -201,24 +201,26 @@ def remove_stop_loss_from_daytracker(
     While quantity is > 0, remove items via np.argmax and update quantity.
     Return updated daytracker
     j = [[1,6,2],[1,5,8],[2,7,1]]
-    j = np.array(j)[:,-1]
+    j = np.array(j)[:,-1] returns ndarray [2,8,1]
     """
-    quantity_array = np.array(daytracker[stock][:, -1])
-    while quantity > 0:
-        stop_loss_index = np.argmax(quantity_array)
-        quantity -= quantity_array[stop_loss_index]
-        np.delete(quantity_array, stop_loss_index)
-        daytracker[stock] = daytracker[stock].pop(stop_loss_index)
-        # np.delete
+    try:
+        quantity_array = np.array(daytracker[stock][:, -1])  #
+        while quantity > 0:
+            stop_loss_index = np.argmax(quantity_array)
+            quantity -= quantity_array[stop_loss_index]
+            np.delete(quantity_array, stop_loss_index)
+            daytracker[stock] = daytracker[stock].pop(stop_loss_index)
+            # np.delete
+    except Exception as e:  #
+        print(f"Exception: {e}")
 
 
 def check_stop_loss(
     daytracker: defaultdict(list),
+    stop_loss_thresholds: defaultdict(list),
     positions: dict,
     database: pd.DataFrame,
     day_number: int,
-    stddev,
-    z_score=13,
 ):
     """
     Day_number is int not strftime string
@@ -226,17 +228,18 @@ def check_stop_loss(
     Daytracker item format: [qty,day_bought,price]
 
     We need to restructure to get spread (sigma in here). Or, we can store as a separate dataframe
+
+    Sell_threshold
     """
     # np.where?
     to_sell = []  # stores instructions for stocks to sell
     for col_num, stock in enumerate(positions.keys()):
         cur_price = database.iloc[day_number, col_num]
-        sell_threshold = cur_price - z_score * stddev
+        print(stop_loss_thresholds[stock])
+        sell_threshold, quantity = stop_loss_thresholds[stock][day_number - 1]
         stock_qty = 0
-        for quantity, day_bought, price in daytracker[stock]:
-            # exceed = np.where(item[2]<sell_threshold,item)
-            if price < sell_threshold:
-                stock_qty += quantity
+        if cur_price < sell_threshold:
+            stock_qty += quantity
         to_sell.append(["SELL", stock, stock_qty])
 
     return [to_sell]

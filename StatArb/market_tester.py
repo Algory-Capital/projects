@@ -9,7 +9,7 @@ import strategy as strategy
 import adf
 import pandas as pd
 import os
-from ecm import Pair
+from ecm import Pair, get_stop_loss_thresholds
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from helper import (
@@ -21,6 +21,8 @@ from helper import (
     get_market_valid_times,
     slice_database_by_dates,
     get_market_end_date,
+    remove_stop_loss_from_daytracker,
+    check_stop_loss,
 )
 import numpy as np
 from tqdm import tqdm
@@ -95,7 +97,7 @@ def calculate_commission(trade):
 
 
 # calculates value for positions TO NOW
-def portfolio_value(latest=True):
+def portfolio_value(latest=True, date: str = ""):
     total_value = current_capital
     if latest:
         for symbol, position in positions.items():
@@ -106,9 +108,8 @@ def portfolio_value(latest=True):
             position_value = position["quantity"] * current_price
             total_value += position_value
     else:
-        global day_number
         for symbol, position in positions.items():
-            current_price = database.iloc[day_number][symbol]
+            current_price = database.loc[date][symbol]
 
             position_value = position["quantity"] * current_price
             total_value += position_value
@@ -174,7 +175,7 @@ def sell_stock(symbol, quantity, price, timestamp):
 
         # Update position
         positions[new_trade.symbol]["quantity"] -= quantity
-        daytracker = remove_from_daytracker(symbol, quantity, daytracker)
+        # daytracker = remove_from_daytracker(symbol, quantity, daytracker)
 
         # Check if all shares are sold for this position
         if positions[new_trade.symbol]["quantity"] == 0:
@@ -249,10 +250,33 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
             type(instructions.index[0]),
             instructions.index[-1],
         )"""
-        to_sell = check_hold(daytracker, positions, day_number, HOLDING_PERIOD)
+        exit_hold = check_hold(
+            daytracker, positions, day_number, HOLDING_PERIOD
+        )  # instructions to exit positions beyond holding period
         # print("VAlues: ", instructions.values.tolist(), to_sell)
-        run_daily_instructions(current_date, instructions.values.tolist() + to_sell)
-        portfolio_history = save_portfolio_value(portfolio_history)
+        run_daily_instructions(current_date, instructions.values.tolist() + exit_hold)
+
+        # update daytracker. Will move into function if this works
+        if exit_hold:
+            for daily_exit_hold in exit_hold:
+                if len(daily_exit_hold) != 3:
+                    continue
+                for order_type, stock, stock_qty in daily_exit_hold:
+                    remove_from_daytracker(stock, stock_qty, daytracker)
+
+        stop_loss = check_stop_loss(
+            daytracker, stop_loss_thresholds, positions, database, day_number
+        )
+        if stop_loss:
+            # run_daily_instructions(current_date, stop_loss)
+
+            for daily_stop_loss in stop_loss:
+                if len(daily_stop_loss) != 3:
+                    continue
+                for order_type, stock, stock_qty in daily_stop_loss:
+                    remove_stop_loss_from_daytracker(stock, stock_qty, daytracker)
+
+        portfolio_history = save_portfolio_value(portfolio_history, current_date)
         # print(current_date)
         """except Exception as e:
             print(f"No data available for {current_date}, Error: {e}")
@@ -299,12 +323,14 @@ def plot_all(series: pd.Series):
     fig.savefig(os.path.join("StatArb", "Backtests", f"{start_date}_{end_date}.png"))
 
     fig.show()
-    time.sleep(10)
+    print(
+        f"Spy: {spy_data.values[-1]}, {spy_data_normalized.values[-1]}%\nStatArb: {series.values[-1]},  {series_data_normalized.values[-1]}"
+    )
 
 
-def save_portfolio_value(series: pd.Series, latest=False):
+def save_portfolio_value(series: pd.Series, current_date: str, latest=False):
     # global portfolio_history
-    series.at[len(series)] = portfolio_value(latest)
+    series.at[len(series)] = portfolio_value(latest, current_date)
     return series
 
 
@@ -362,6 +388,9 @@ if __name__ == "__main__":
     print("Converting orders to pairs")
     for pair in tqdm(pairs):
         instructions = pair_to_orders(pair)  # populate orders dataframe
+
+    stop_loss_thresholds = get_stop_loss_thresholds()
+    print(stop_loss_thresholds)
 
     print("Finished converting orders to pairs")
     orders.sort_index(inplace=True)
