@@ -292,7 +292,7 @@ class Pair:
         z_score,
         priceX,
         priceY,
-        enter_position_z=3,
+        enter_position_z=5,
         exit_position_z=1,
         dollar_allocation=1000,
     ):  # called by calculate_z_score
@@ -351,12 +351,16 @@ class Pair:
         )  # careful for taking log of negative price
         self.spreads.append(spread)
 
-        stddev = np.std(self.spreads)
+        stddev = np.std(
+            self.spreads
+        )  # np.shift if at certain length to get rolling numbers
         mean = np.mean(
             self.spreads
         )  # this mean is not rolling. Some models may make it a rolling mean
 
-        z_score = (spread - mean) / stddev
+        z_score = (
+            spread - mean
+        ) / stddev  # we need to track z-scores to see if they are reasonable. the math may be flawed here?
 
         if np.isnan(z_score):  # issue with division by zero if no spread history
             z_score = 0
@@ -403,9 +407,17 @@ def get_buy_size(dollar_allocation, stock_price, partial=False):
         return int(dollar_allocation // stock_price)
 
 
-def calculate_stop_loss_threshold(stock, price, stddev, quantity, z_score=100):
-    threshold = price - z_score * stddev  # calculated threshold
+def calculate_stop_loss_threshold(
+    stock, price, stddev, quantity, z_score=100, pct_threshold=50
+):
+    # threshold = price - z_score * stddev  # calculated threshold
+    threshold = price * (1 - (pct_threshold) / 100)
+    if stddev == 0:  # if no spread_history
+        stop_loss_thresholds[stock].append((0, quantity))
+        return
     stop_loss_thresholds[stock].append((threshold, quantity))
+    print(threshold)
+    return
 
 
 def get_stop_loss_thresholds():

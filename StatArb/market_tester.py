@@ -49,6 +49,13 @@ current_capital = settings["INITIAL_CAPITAL"]
 
 day_number = 0
 
+orders_index = []
+orders = pd.DataFrame()
+database = pd.DataFrame()
+database_index = []
+
+portfolio_history = pd.Series()
+
 
 class Trade:
     def __init__(self, trade_id, symbol, quantity, price, timestamp, type):
@@ -268,7 +275,7 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
             daytracker, stop_loss_thresholds, positions, database, day_number
         )
         if stop_loss:
-            # run_daily_instructions(current_date, stop_loss)
+            run_daily_instructions(current_date, stop_loss)
 
             for daily_stop_loss in stop_loss:
                 if len(daily_stop_loss) != 3:
@@ -286,7 +293,7 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     return None
 
 
-def plot_all(series: pd.Series):
+def plot_all(series: pd.Series, start_date, end_date):
     fig, ax1 = plt.subplots()
     spy_data = get_spy_index_data(
         start_date=start_date, end_date=get_market_end_date(end_date=end_date)
@@ -414,4 +421,4 @@ if __name__ == "__main__":
         f"Done. Took {time_diff:.2f} seconds. Average {time_diff/len(pairs):.2f} seconds per pair."
     )
 
-    plot_all(portfolio_history)
+    plot_all(portfolio_history, start_date, end_date)

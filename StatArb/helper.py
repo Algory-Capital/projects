@@ -235,7 +235,7 @@ def check_stop_loss(
     to_sell = []  # stores instructions for stocks to sell
     for col_num, stock in enumerate(positions.keys()):
         cur_price = database.iloc[day_number, col_num]
-        print(stop_loss_thresholds[stock])
+        # print(stop_loss_thresholds[stock])
         sell_threshold, quantity = stop_loss_thresholds[stock][day_number - 1]
         stock_qty = 0
         if cur_price < sell_threshold:
