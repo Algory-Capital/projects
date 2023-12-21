@@ -14,6 +14,19 @@ from math import log
 import numpy as np
 from collections import defaultdict
 
+model_settings = {
+    "HOLDING_PERIOD": 15,
+    "PCT_SL_THRESHOLD": 70,  # percent stop loss threshold
+    "PORTION_SIZE": 1000,  # dollar allocation to each trade
+    "ENTER_Z": 5,
+    "EXIT_Z": 1,
+}
+
+
+def get_model_settings():
+    return model_settings
+
+
 root = "StatArb"
 
 if not os.path.exists(os.path.join(root, "spy.csv")):
@@ -292,15 +305,15 @@ class Pair:
         z_score,
         priceX,
         priceY,
-        enter_position_z=5,
-        exit_position_z=1,
-        dollar_allocation=1000,
     ):  # called by calculate_z_score
         """
         Needs to inverse order for other side
         Need to add buy put
         Portion sizing
         """
+        enter_position_z = model_settings["ENTER_Z"]
+        exit_position_z = model_settings["EXIT_Z"]
+        dollar_allocation = model_settings["PORTION_SIZE"]
 
         print(z_score)
 
@@ -408,8 +421,14 @@ def get_buy_size(dollar_allocation, stock_price, partial=False):
 
 
 def calculate_stop_loss_threshold(
-    stock, price, stddev, quantity, z_score=100, pct_threshold=50
+    stock,
+    price,
+    stddev,
+    quantity,
+    z_score=100,
+    pct_threshold=model_settings["PCT_SL_THRESHOLD"],
 ):
+    pct_threshold = model_settings["PCT_SL_THRESHOLD"]
     # threshold = price - z_score * stddev  # calculated threshold
     threshold = price * (1 - (pct_threshold) / 100)
     if stddev == 0:  # if no spread_history

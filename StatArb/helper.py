@@ -9,6 +9,16 @@ import numpy as np
 
 def slice_database_by_dates(database, start_date, end_date):
     # Does not have error handling. Must provide valid business days for both start_date and end_date
+    if start_date not in database.index:
+        raise ValueError(
+            f"Could not find start date. {start_date}. Database index range: {database.index[0],database.index[-1]}"
+        )
+
+    if end_date not in database.index:
+        raise ValueError(
+            f"Could not find end date. {end_date}. Database index range: {database.index[0],database.index[-1]}"
+        )
+
     start_index = np.where(database.index == start_date)[0][0]
     end_index = np.where(database.index == end_date)[0][0]
 
@@ -234,6 +244,7 @@ def check_stop_loss(
     # np.where?
     to_sell = []  # stores instructions for stocks to sell
     for col_num, stock in enumerate(positions.keys()):
+        print(database, day_number, col_num, len(database))
         cur_price = database.iloc[day_number, col_num]
         # print(stop_loss_thresholds[stock])
         sell_threshold, quantity = stop_loss_thresholds[stock][day_number - 1]
