@@ -523,6 +523,12 @@ input:checked + .slider-aum:before {
 }
 
 /* SUBMIT A POSITION */
+#loginForm {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  z-index: 1000;
+}
+
 body.addPosBody {
   display: flex;
   justify-content: center;
@@ -555,6 +561,15 @@ body.addPosBody {
   font-size: 16px;
   font-weight: 600;
   margin-top: 10px;
+}
+
+#originalContent {
+  display: flex;
+  opacity: 0;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  transition: opacity 0.5s ease;
 }
 
 .input-container {

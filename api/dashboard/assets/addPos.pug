@@ -1,51 +1,64 @@
 doctype html
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add a Position</title>
-    <link rel="stylesheet" href="../assets/styles.css" />
-</head>
-<body id="tsparticles" class="addPosBody">
-    <form class="form" action="/addPos" method="post">
-        <div class="title">Welcome</div>
-        <div class="subtitle">Add a position to the Algory Dashboard</div>
-  
-        <div class="input-container ic1">
-          <input placeholder="" type="text" class="input" id="ticker" name="ticker">
-          <div class="cut cut-short" id="tickerdiv"></div>
-          <label class="iLabel" id="tickerlabel" for="ticker">Ticker</label>
-        </div>
-  
-        <div class="input-container ic2">
-          <input placeholder="" type="text" class="input" id="startdate" name="startdate">
-          <div class="cut cut-short" id="startdatediv"></div>
-          <label class="iLabel" id="startdatelabel" for="startdate">Start Date</label>
-        </div>
+head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title Add a Position 
+    link(rel="stylesheet", href="../assets/styles.css")
+    script(src="../assets/scripts.js")
 
-        <div class="input-container ic2">
-          <input placeholder="" type="text" class="input" id="startprice" name="startprice">
-          <div class="cut cut-short" id="startpricediv"></div>
-          <label class="iLabel" id="startpricelabel" for="startprice">Entry Price</label>
-        </div>
+body#tsparticles(class="addPosBody")
+    div.form(id="loginForm")
+        .title Login
+        .subtitle Please enter the password
 
-        <div class="input-container ic2">
-            <input placeholder="" type="text" class="input" id="shares" name="shares">
-            <div class="cut" id="sharesdiv"></div>
-            <label class="iLabel" id="shareslabel" for="shares">Number of Shares</label>
-        </div>
+        .input-container.ic1
+            input#password.input(placeholder="" type="password" name="password")
+            #passworddiv.cut.cut-short
+            label#passwordlabel.iLabel(for="password") Password
 
-        <div class="input-container ic2">
-            <input placeholder="" type="text" class="input" id="assetclass" name="assetclass">
-            <div class="cut" id="assetclassdiv"></div>
-            <label class="iLabel" id="assetclasslabel" for="assetclass">Asset Class (either E or FI)</label>
-        </div>
+        button.submit(type="button" onclick="authenticate()") Submit
+    
+    div#originalContent
+        form.form(action="/addPos" method="post")
+            .title Welcome 
+            .subtitle Add a position to the Algory Dashboard
 
-        <button class="submit" type="text">submit</button>
-    </form>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tsparticles/1.18.1/tsparticles.min.js" integrity="sha512-PYHWDEuXOTJ9MZ+/QHqkbgiEYZ+LImQv3i/9NyYOABFvK37e4q4Wg7aQDN1JpoGiEu1TYZh6JMrZluZox2gbDA==" crossorigin="anonymous"></script>
+            .input-container.ic1
+                input#ticker.input(placeholder="" type="text" name="ticker")
+                #tickerdiv.cut.cut-short
+                label#tickerlabel.iLabel(for="ticker") Ticker 
+            
+            .input-container.ic2
+                input#startdate.input(placeholder="" type="text" name="startdate")
+                #startdatediv.cut.cut-short
+                label#startdatelabel.iLabel(for="startdate") Start Date
+
+            .input-container.ic2
+                input#startprice.input(placeholder="" type="text" name="startprice")
+                #startpricediv.cut.cut-short
+                label#startpricelabel.iLabel(for="startprice") Entry Price
+
+            .input-container.ic2
+                input#shares.input(placeholder="" type="text" name="shares")
+                #sharesdiv.cut
+                label#shareslabel.iLabel(for="shares") Number of Shares 
+
+            .input-container.ic2
+                input#assetclass.input(placeholder="" type="text" name="assetclass")
+                #assetclassdiv.cut
+                label#assetclasslabel.iLabel(for="assetclass") Asset Class (either E or FI)
+
+            button.submit(type="submit") submit 
+
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/tsparticles/1.18.1/tsparticles.min.js" integrity="sha512-PYHWDEuXOTJ9MZ+/QHqkbgiEYZ+LImQv3i/9NyYOABFvK37e4q4Wg7aQDN1JpoGiEu1TYZh6JMrZluZox2gbDA==" crossorigin="anonymous")
 
     script.
         document.addEventListener('DOMContentLoaded', function() {
+
+            const passwordInput = document.getElementById('password');
+            const passwordLabel = document.getElementById('passwordlabel');
+            const passwordDiv = document.getElementById('passworddiv');
+
             const tickerInput = document.getElementById('ticker');
             const tickerLabel = document.getElementById('tickerlabel');
             const tickerDiv = document.getElementById('tickerdiv');
@@ -70,6 +83,15 @@ doctype html
             checkInput();
 
             // Add event listener to input element
+            passwordInput.addEventListener('input', function() {
+                checkInput();
+            });
+            passwordInput.addEventListener('keydown', async function (e) {
+                await new Promise(resolve => setTimeout(resolve, 5));
+                if (e.key === "Enter") {
+                    authenticate();
+                }
+            });
             tickerInput.addEventListener('input', function() {
                 checkInput();
             });
@@ -87,6 +109,17 @@ doctype html
             });
 
             function checkInput() {
+                const passwordValue = passwordInput.value.trim();
+
+                // Check if input is populated
+                if (passwordValue !== '') {
+                passwordLabel.classList.add('persist');
+                passwordDiv.classList.add('persist');
+                } else {
+                passwordLabel.classList.remove('persist');
+                passwordDiv.classList.remove('persist');
+                }
+
                 const tickerValue = tickerInput.value.trim();
 
                 // Check if input is populated
@@ -259,5 +292,3 @@ doctype html
             }
         };
         tsParticles.load('tsparticles', particles);
-</body>
-</html>
