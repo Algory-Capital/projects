@@ -71,10 +71,10 @@
               <div class="col-md-12">
                 <div class="box">
                   <div class="text-right">
-                    <!-- <label class="switch">
+                    <label class="switch">
                       <input id="aum-switch" type="checkbox">
                       <span class="slider-aum"></span>
-                    </label> -->
+                    </label>
                   </div>
                   <div id="aum"></div>
                   <div id="aumDetails">
@@ -180,7 +180,7 @@
       //   return { payoutRatio, payout, frequency }
       // }
 
-      fetch("https://algoryapi.herokuapp.com/getData").then(
+      fetch("http://localhost:3000/getData").then(
         result => result.json()).then(
           async (output) => {
             // Loader
@@ -229,6 +229,9 @@
             const equityCount = Object.values(assetClass).filter(val => val == "E").length;
             const FICount = Object.values(assetClass).filter(val => val == "FI").length;
 
+            var countEquity = 0;
+            var countFI = 0;
+
             for (var i = 1; i <= tickers.length; i++) {
               var pos = output[tickers[i-1]];
               if (pos.data.at(-1) > pos.entryPrice) {
@@ -236,8 +239,8 @@
               } else {
                 var chartColor = '#a62727'
               }
-              var countEquity = 0;
-              var countFI = 0;
+              
+
               if (assetClass[tickers[i-1]] == "E"){
                 countEquity += 1;
                 let data = pos.data;
@@ -316,10 +319,9 @@
                 };
 
                 // calculate position details
-                let pnl = ((pos.data.at(-1) - pos.entryPrice) / pos.entryPrice * 100).toFixed(2)
-                let spEntry = output['SPY'].data.at(output['SPY'].dates.indexOf(pos.entryDate));
-                let formatEntry = new Date(pos.entryDate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
-
+                let pnl = ((pos.data.at(-1) - pos.entryPrice) / pos.entryPrice * 100).toFixed(2);
+                let spEntry = output['SPY'].data.at(output['SPY'].dates.indexOf(pos.startDate));
+                let formatEntry = new Date(pos.startDate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"});
 
                 if (equityCount % 2 == 0) {boxPos = 6}
                 else if (countEquity < equityCount) {boxPos = 6}
@@ -385,22 +387,27 @@
                 );
                 var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
                 sparkPosition.render();
-              } else {
+              } 
+              else {
                 countFI += 1;
                 var chartColor = "#01397d"
                 let data = pos.data;
                 let dates = pos.dates;
+
+                let formattedData = data.map(function(element){
+                                        if (element != null) {
+                                          return Number(element.toFixed(2));
+                                        } else {
+                                          return element
+                                        }
+                                    });
+
+
                 var sparkOpt = {
                   series: [
                     {
                       name: tickers[i-1],
-                      data: data.map(function(element){
-                            if (element != null) {
-                              return Number(element.toFixed(2));
-                            } else {
-                              return element
-                            }
-                        })
+                      data: formattedData
                     }
                   ],
                   chart: {
@@ -464,15 +471,18 @@
                 };
 
                 // calculate position details
-                let formatEntry = new Date(pos.entryDate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
-                let formatLastDivPayment = new Date(pos.divInfo.lastUpdate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
-
-                var frequency;
-                if (pos.divInfo.frequency == 12) {frequency = "Monthly"}
-                else if (pos.divInfo.frequency == 6) {frequency = "Every other month"}
-                else if (pos.divInfo.frequency == 4) {frequency = "Quarterly"}
-                else if (pos.divInfo.frequency == 2) {frequency = "Biannual"}
-                else {frequency = "Annual"}
+                let formatEntry = new Date(pos.startDate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
+                
+                if (pos.divInfo) {
+                  let formatLastDivPayment = new Date(pos.divInfo.lastUpdate+"T00:00:00-05:00").toLocaleDateString('en-us', {month: "long", day: "2-digit", year: "numeric", timeZone: "America/New_York"})
+  
+                  var frequency;
+                  if (pos.divInfo.frequency == 12) {frequency = "Monthly"}
+                  else if (pos.divInfo.frequency == 6) {frequency = "Every other month"}
+                  else if (pos.divInfo.frequency == 4) {frequency = "Quarterly"}
+                  else if (pos.divInfo.frequency == 2) {frequency = "Biannual"}
+                  else {frequency = "Annual"}
+                }
 
 
 
@@ -514,10 +524,10 @@
                             }).append([
                               `<p><strong>Entry Date: </strong>${formatEntry}</p>`,
                               `<p><strong>Shares: </strong>${pos.shares}</p>`,
-                              `<p><strong>Payout Ratio: </strong>${pos.divInfo.payoutRatio.toFixed(2)}</p>`,
-                              `<p><strong>Last Payout: </strong>$${pos.divInfo.payout.toFixed(2)}</p>`,
-                              `<p><strong>Last Payment Date: </strong>${formatLastDivPayment}</p>`,
-                              `<p><strong>Payout Frequency: </strong>${frequency}</p>`,
+                              `<p><strong>Payout Ratio: </strong>${(pos.divInfo) ? pos.divInfo.payoutRatio.toFixed(2) : 'Unable to pull data'}</p>`,
+                              `<p><strong>Last Payout: </strong>${(pos.divInfo) ? '$' + pos.divInfo.payout.toFixed(2) : 'Unable to pull data'}</p>`,
+                              `<p><strong>Last Payment Date: </strong>${(pos.divInfo) ? formatLastDivPayment : 'Unable to pull data'}</p>`,
+                              `<p><strong>Payout Frequency: </strong>${(pos.divInfo) ? frequency : 'Unable to pull data'}</p>`,
                               ])
                             ]
                           )
@@ -536,8 +546,8 @@
 
 
             // moving on to AUM
-            assetWorth.push(Number.parseFloat((aum.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2)));
-            // assetWorth.push(output["AUM"].cash);
+            // assetWorth.push(Number.parseFloat((aum.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2)));
+            assetWorth.push(output["AUM"].cash);
             tickers.push("Cash");
 
             let curYear = aumDates.at(-1).slice(0, 4);
@@ -684,11 +694,11 @@
               ])
             );
 
-            if (sr > 1) {
+            // if (sr > 1) {
               $("#aumDetailsNumbers").append(
                 `<p"><strong>Sharpe Ratio: </strong> ${sr.toFixed(3)}</p>`
               )
-            }
+            // }
 
 
             var aumChart = new ApexCharts(document.querySelector('#aum'), aumOpt);
@@ -934,6 +944,7 @@
 
           }
         ).catch((err) => {
+          console.log(err);
           $(".errorCard").css("display", "flex");
           $(".errorCard")[0].addEventListener('click', e => {
             location.reload();

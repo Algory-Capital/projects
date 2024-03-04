@@ -10,6 +10,7 @@ import adf
 import pandas as pd
 import os
 from ecm import Pair, get_stop_loss_thresholds
+import ecm as ecm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from helper import (
@@ -43,7 +44,6 @@ positions = {}
 
 # Tracks days held, updates based on sales, and auto sells at certain date
 daytracker = defaultdict(list)
-HOLDING_PERIOD = settings["HOLDING_PERIOD"]
 
 current_capital = settings["INITIAL_CAPITAL"]
 
@@ -239,6 +239,8 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
     to_sell = []
     global day_number, daytracker, portfolio_history
 
+    day_number = 0
+
     # Set the 'Date' column as the index
     # database.set_index("Date", inplace=True)
     # database.sort_index(inplace=True)
@@ -258,7 +260,7 @@ def run_timeline(orders: pd.DataFrame, start_date, end_date):
             instructions.index[-1],
         )"""
         exit_hold = check_hold(
-            daytracker, positions, day_number, HOLDING_PERIOD
+            daytracker, positions, day_number, ecm.model_settings["HOLDING_PERIOD"]
         )  # instructions to exit positions beyond holding period
         # print("VAlues: ", instructions.values.tolist(), to_sell)
         run_daily_instructions(current_date, instructions.values.tolist() + exit_hold)
