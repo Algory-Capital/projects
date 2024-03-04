@@ -6,6 +6,7 @@ import pandas as pd
 import pandas_datareader.data as web
 import yfinance as yfin
 import datetime
+import util as util
 yfin.pdr_override()
 
 def getIVP(cov):
@@ -109,7 +110,7 @@ def plotCorrMatrix(corr, labels= None):
     plt.close()
     return
 
-tickers = ['BRK-B','AAPL','RITM','JPM','MSFT','GT']
+tickers = util.get_tickers(include_AUM=False, include_SPY=False, include_CLOA=False)
 
 start_date = datetime.datetime(2019, 4, 1)
 end = datetime.datetime.today()
@@ -136,25 +137,27 @@ hrc = getHRCBipart(cov, df, sortIx)
 print('Hierarchical Risk Parity', hrp, sep='\n')
 print('Hierarchical Risk Contribution', hrc, sep='\n')
 
-weighted_returns_hrp = np.sum(df * hrp[df.columns], axis = 1)
-sr_hrp = weighted_returns_hrp.mean() / weighted_returns_hrp.std() * 252 ** 0.5
-print('SHARPE RATIO OF HRP: ', sr_hrp)
 
-weighted_returns_hrc = np.sum(df * hrc[df.columns], axis = 1)
-sr_hrc = weighted_returns_hrc.mean() / weighted_returns_hrc.std() * 252 ** 0.5
-print('SHARPE RATIO OF HRC: ', sr_hrc)
 
-herc = pd.Series([0.0625, 0.125, 0.5, 0.125, 0.0625, 0.125], index=list(cov.index))
-weighted_returns_herc = np.sum(df * herc[df.columns], axis= 1)
-sr_herc = weighted_returns_herc.mean() / weighted_returns_herc.std() * 252 ** 0.5
-print('SHARPE RATIO OF HERC: ', sr_herc)
+# weighted_returns_hrp = np.sum(df * hrp[df.columns], axis = 1)
+# sr_hrp = weighted_returns_hrp.mean() / weighted_returns_hrp.std() * 252 ** 0.5
+# print('SHARPE RATIO OF HRP: ', sr_hrp)
 
-cur = [0.115, 0.135, 0.042, 0.108, 0.109, 0.048]
-cur = pd.Series([cur[i] / sum(cur) for i in range(len(cur))], index=list(cov.index))
-weighted_returns_cur = np.sum(df * cur[df.columns], axis= 1)
-sr_cur = weighted_returns_cur.mean() / weighted_returns_cur.std() * 252 ** 0.5
-print('SHARPE RATIO OF CURRENT PORT: ', sr_cur)
+# weighted_returns_hrc = np.sum(df * hrc[df.columns], axis = 1)
+# sr_hrc = weighted_returns_hrc.mean() / weighted_returns_hrc.std() * 252 ** 0.5
+# print('SHARPE RATIO OF HRC: ', sr_hrc)
 
-plotdf = pd.DataFrame({'hrp' : hrp, 'hrc' : hrc, 'herc' : herc, 'current' : cur}, index=list(df.std().index))
-plotdf.plot.bar(rot=0, color= ['#9FE4FF', '#01A7EA', '#0241CE', '#022E91'], title= 'Weights of Different Algorithms')
-plt.show()
+# herc = pd.Series([0.0625, 0.125, 0.5, 0.125, 0.0625, 0.125], index=list(cov.index))
+# weighted_returns_herc = np.sum(df * herc[df.columns], axis= 1)
+# sr_herc = weighted_returns_herc.mean() / weighted_returns_herc.std() * 252 ** 0.5
+# print('SHARPE RATIO OF HERC: ', sr_herc)
+
+# cur = [0.115, 0.135, 0.042, 0.108, 0.109, 0.048]
+# cur = pd.Series([cur[i] / sum(cur) for i in range(len(cur))], index=list(cov.index))
+# weighted_returns_cur = np.sum(df * cur[df.columns], axis= 1)
+# sr_cur = weighted_returns_cur.mean() / weighted_returns_cur.std() * 252 ** 0.5
+# print('SHARPE RATIO OF CURRENT PORT: ', sr_cur)
+
+# plotdf = pd.DataFrame({'hrp' : hrp, 'hrc' : hrc, 'herc' : herc, 'current' : cur}, index=list(df.std().index))
+# plotdf.plot.bar(rot=0, color= ['#9FE4FF', '#01A7EA', '#0241CE', '#022E91'], title= 'Weights of Different Algorithms')
+# plt.show()
