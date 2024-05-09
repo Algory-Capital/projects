@@ -1,0 +1,5 @@
+pandas_datareader
+requests
+requests_cache
+pyrate-limiter
+requests-ratelimiter

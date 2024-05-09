@@ -60,11 +60,11 @@ from sklearn.metrics import make_scorer
 # https://github.com/scikit-optimize/scikit-optimize/issues/1171
 
 model_settings = {
-    "HOLDING_PERIOD": 15,
-    "PCT_SL_THRESHOLD": 30,  # percent stop loss threshold
-    "PORTION_SIZE": 1000,  # dollar allocation to each trade
-    "ENTER_Z": 4,
-    "EXIT_Z": 1,
+    "HOLDING_PERIOD": 9,
+    "PCT_SL_THRESHOLD": 44,  # percent stop loss threshold
+    "PORTION_SIZE": 1455,  # dollar allocation to each trade
+    "ENTER_Z": 6,
+    "EXIT_Z": 2,
 }
 
 
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     end_date = "2022-01-03"
     get_database(start_date=start_date, end_date=end_date)
 
-    generate_training_parameters(15)
+    # generate_training_parameters(15)
 
     if training_parameters:
         for i in tqdm(range(len(training_parameters))):

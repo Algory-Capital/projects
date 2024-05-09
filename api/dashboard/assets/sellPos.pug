@@ -7,7 +7,7 @@ head
     link(rel="stylesheet", href="../assets/styles.css")
     script(src="../assets/scripts.js")
 
-body#tsparticles(class="addPosBody")
+body#tsparticles(class="sellPosBody")
     div.form(id="loginForm")
         .title Login
         .subtitle Please enter the password
@@ -20,11 +20,11 @@ body#tsparticles(class="addPosBody")
         button.submit(type="button" onclick="authenticate()") Submit
     
     div#originalContent
-        form.form(action="/addPos" method="post")
+        form.form(action="/sellPos" method="post")
             .title Welcome 
-            .subtitle Add a position to the Algory Dashboard
+            .subtitle Sell a position to the Algory Dashboard
 
-            .posButton(href="sellPos") SELL A POSITION
+            .posButton(href="addPos") ADD A POSITION
 
             .input-container.ic1
                 input#ticker.input(placeholder="" type="text" name="ticker")
@@ -34,12 +34,12 @@ body#tsparticles(class="addPosBody")
             .input-container.ic2
                 input#startdate.input(placeholder="" type="text" name="startdate")
                 #startdatediv.cut.cut-short
-                label#startdatelabel.iLabel(for="startdate") Start Date
+                label#startdatelabel.iLabel(for="startdate") Sell Date
 
             .input-container.ic2
-                input#startprice.input(placeholder="" type="text" name="startprice")
-                #startpricediv.cut.cut-short
-                label#startpricelabel.iLabel(for="startprice") Entry Price
+                input#sellprice.input(placeholder="" type="text" name="sellprice")
+                #sellpricediv.cut.cut-short
+                label#sellpricelabel.iLabel(for="sellprice") Sell Price
 
             .input-container.ic2
                 input#shares.input(placeholder="" type="text" name="shares")
@@ -70,9 +70,9 @@ body#tsparticles(class="addPosBody")
             const startdateLabel = document.getElementById('startdatelabel');
             const startdateDiv = document.getElementById('startdatediv');
 
-            const startpriceInput = document.getElementById('startprice');
-            const startpriceLabel = document.getElementById('startpricelabel');
-            const startpriceDiv = document.getElementById('startpricediv');
+            const sellpriceInput = document.getElementById('sellprice');
+            const sellpriceLabel = document.getElementById('sellpricelabel');
+            const sellpriceDiv = document.getElementById('sellpricediv');
 
             const sharesInput = document.getElementById('shares');
             const sharesLabel = document.getElementById('shareslabel');
@@ -101,7 +101,7 @@ body#tsparticles(class="addPosBody")
             startdateInput.addEventListener('input', function() {
                 checkInput();
             });
-            startpriceInput.addEventListener('input', function() {
+            sellpriceInput.addEventListener('input', function() {
                 checkInput();
             });
             sharesInput.addEventListener('input', function() {
@@ -145,15 +145,15 @@ body#tsparticles(class="addPosBody")
                 startdateDiv.classList.remove('persist');
                 }
 
-                const startpriceValue = startpriceInput.value.trim();
+                const sellpriceValue = sellpriceInput.value.trim();
 
                 // Check if input is populated
-                if (startpriceValue !== '') {
-                startpriceLabel.classList.add('persist');
-                startpriceDiv.classList.add('persist');
+                if (sellpriceValue !== '') {
+                sellpriceLabel.classList.add('persist');
+                sellpriceDiv.classList.add('persist');
                 } else {
-                startpriceLabel.classList.remove('persist');
-                startpriceDiv.classList.remove('persist');
+                sellpriceLabel.classList.remove('persist');
+                sellpriceDiv.classList.remove('persist');
                 }
 
                 const sharesValue = sharesInput.value.trim();

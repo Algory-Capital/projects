@@ -144,7 +144,7 @@ For stock in position:
 
 
 def check_hold(
-    daytracker: defaultdict(list), positions: dict, cur_day: int, MAXHOLD: int
+    daytracker: defaultdict, positions: dict, cur_day: int, MAXHOLD: int
 ) -> list[list]:  # we need to actually sell it
     """
     Sells when reaches a holding period MAXHOLD
@@ -169,14 +169,14 @@ def check_hold(
 
 
 def add_to_daytracker(
-    daytracker: defaultdict(list), quantity: int, ticker: str, cur_day: int, price: int
+    daytracker: defaultdict, quantity: int, ticker: str, cur_day: int, price: int
 ):
     # print(daytracker, type(daytracker))
     daytracker[ticker].append([quantity, cur_day, price])
     return daytracker
 
 
-def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(list)):
+def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict):
     """
     Called when a stock is sold from market_tester. Removes stocks from daytracker based on earliest date bought
     and quantity sold in instructions
@@ -204,7 +204,7 @@ def remove_from_daytracker(stock: str, quantity: int, daytracker: defaultdict(li
 
 
 def remove_stop_loss_from_daytracker(
-    stock: str, quantity: int, daytracker: defaultdict(list)
+    stock: str, quantity: int, daytracker: defaultdict
 ):
     """
     Approach:
@@ -226,8 +226,8 @@ def remove_stop_loss_from_daytracker(
 
 
 def check_stop_loss(
-    daytracker: defaultdict(list),
-    stop_loss_thresholds: defaultdict(list),
+    daytracker: defaultdict,
+    stop_loss_thresholds: defaultdict,
     positions: dict,
     database: pd.DataFrame,
     day_number: int,
