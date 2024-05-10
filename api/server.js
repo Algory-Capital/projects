@@ -265,7 +265,11 @@ async function updatePosData(startDate, endDate) {
   //   period: "d",
   // });
 
-  const data = await polygon_historical(tickers, startDate, endDate);
+  const data = await polygon_historical(tickers, startDate, endDate).then(
+    (res) => {
+      return JSON.parse(res);
+    }
+  );
 
   for (let ticker of data) {
     if (ticker != "SPY") {
@@ -353,10 +357,12 @@ app.get("/getData", async function (req, res) {
   var spyDates = [];
   for (let i = spy.length - 1; i >= 0; i--) {
     spyData.push(spy[i].adjClose);
-    spyDates.push(JSON.stringify(spy[i].date).slice(1, 11));
+    spyDates.push(JSON.stringify(spy[i].date));
+    //spyDates.push(JSON.stringify(spy[i].date).slice(1, 11));
   }
 
-  const recentDate = JSON.stringify(spy[0].date).slice(1, 11);
+  const recentDate = JSON.stringify(spy[0].date);
+  //const recentDate = JSON.stringify(spy[0].date).slice(1, 11);
 
   if (recentDate > aumResults.dates.at(-1)) {
     js = await updatePosData(aumResults.dates.at(-1), today);
@@ -621,7 +627,11 @@ app.post("/addPos", function (req, res) {
       //   period: "d",
       // });
 
-      const data = await polygon_historical([ticker], startDate, today);
+      const data = await polygon_historical([ticker], startDate, today).then(
+        (res) => {
+          return JSON.parse(res);
+        }
+      );
 
       var adjClose = [];
       var dates = [];
@@ -779,7 +789,11 @@ app.post("/sellPos", function (req, res) {
       //   period: "d",
       // });
 
-      const data = await polygon_historical({ ticker }, startDate, today);
+      const data = await polygon_historical({ ticker }, startDate, today).then(
+        (res) => {
+          return JSON.parse(res);
+        }
+      );
 
       var adjClose = [];
       var dates = [];
