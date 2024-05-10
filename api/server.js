@@ -8,8 +8,8 @@ const fetch = require("node-fetch");
 // const yfin2 = require("yahoo-finance2");
 require("dotenv").config();
 
-import { restClient } from "@polygon.io/client-js";
-import { start } from "repl";
+const { restClient } = require("@polygon.io/client-js");
+// const { start } = require("repl");
 
 var path = require("path");
 
@@ -56,7 +56,7 @@ const aumDataSchema = {
 
 const AUMData = mongoose.model("AUMData", aumDataSchema);
 
-//const apikey = process.env.API_KEY;
+const apikey = process.env.POLY_API_KEY;
 const fetchURL =
   "https://api.polygon.io/v3/reference/dividends?apiKey=" + apikey + "&ticker=";
 
@@ -69,46 +69,57 @@ function unix_to_date(unix_ts) {
 
   // Create our formatted string
   var year = date.getUTCFullYear();
-  var month = date.getUTCMonth() + 1;
-  var day = date.getDate();
+  var month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+  var day = date.getDate().toString().padStart(2, "0");
 
-  // Build string
+  // Build string: YYYY-MM-DD
   return year + "-" + month + "-" + day;
 }
 
 async function polygon_historical(tickers, start_date, end_date) {
-  // figure out where start date located
-  /*
-   * Substitute for yfin.historical
-   */
-  let res = {};
-  for (const ticker of tickers) {
-    await rest.stocks
-      .aggregates(ticker, 1, "day", start_date, end_date)
-      .then((data) => {
-        console.log(data);
-        // Get close price only
-        // Does close price on market day mean current price for Polygon?
-        res[ticker] = [];
-        data.results.forEach((arg) => {
-          let ts = unix_to_date(arg.t);
+  console.log("POLYGON HISTORICAL CALLED");
 
-          let tkrData = {
-            adjClose: arg.c,
-            date: ts,
-          };
+  return new Promise((resolve, reject) => {
+    let res = {};
+    const promises = []; // Array to store promises from API calls
 
-          res[ticker].push(tkrData);
+    for (const ticker of tickers) {
+      console.log("TICKER: " + ticker);
+      try {
+        console.log("Dates: " + start_date + " : " + end_date);
 
-          //res[ticker]["adjClose"][ts] = arg.c;
-        });
+        const promise = rest.stocks
+          .aggregates(ticker.toUpperCase(), 1, "day", start_date, end_date)
+          .then((data) => {
+            res[ticker] = [];
+
+            data.results.forEach((arg) => {
+              let ts = unix_to_date(arg.t);
+
+              let tkrData = {
+                adjClose: arg.c,
+                date: ts,
+              };
+
+              res[ticker].push(tkrData);
+            });
+          });
+        promises.push(promise);
+      } catch (error) {
+        console.error("ERROR OCCURRED IN POLYGON_HISTORICAL: " + error);
+        reject(error);
+      }
+    }
+
+    Promise.all(promises)
+      .then(() => {
+        console.log("RETURNING:", res);
+        resolve(JSON.stringify(res));
       })
-      .catch((e) => {
-        console.error("An error happened:", e.message);
+      .catch((error) => {
+        throw error;
       });
-  }
-
-  return res;
+  });
 }
 
 // USELESS? We just need a getter + json parsing for polygon data
@@ -329,7 +340,14 @@ app.get("/getData", async function (req, res) {
   //   to: today,
   //   period: "d",
   // });
-  const spy = await polygon_historical(["spy"], oldestDate, today);
+  const spy = await polygon_historical(["spy"], oldestDate, today).then(
+    (res) => {
+      return JSON.parse(res)["spy"];
+    }
+  );
+  //spy = JSON.parse(spy)["spy"];
+
+  console.log("SPY in getData", spy);
 
   var spyData = [];
   var spyDates = [];
@@ -554,6 +572,19 @@ app.get("/getDataOld", function (req, res) {
     }
   });
 });
+
+// app.get("/", async function (req, res) {
+//   console.log("SDJFKLSD");
+//   const oldestDate = new Date().toJSON().slice(0, 10);
+//   const today = new Date().toJSON().slice(0, 10);
+//   let spy = await polygon_historical(["spy"], "2022-01-01", "2023-08-31").then(
+//     () => {
+//       console.log("MEOW");
+//     }
+//   );
+
+//   console.log("SPY", spy);
+// });
 
 // Actual interface to adding a position
 app.get("/addPos", function (req, res) {
