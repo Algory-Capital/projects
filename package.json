@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon api/server.js"
+    "start": "nodemon api/server.js",
+    "postinstall": "cd api && npm install"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +22,7 @@
     "mongoose": "^6.10.1",
     "node-fetch": "^2.6.11",
     "nodemon": "^2.0.21",
-    "yahoo-finance": "^0.3.8"
+    "yahoo-finance": "^0.3.8",
+    "@polygon.io/client-js": "^7.3.2"
   }
 }
