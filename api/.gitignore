@@ -2,6 +2,6 @@ npm-debug.log
 .DS_Store
 /*.env
 *.env
-node_modules/
+#node_modules/
 
 todo.md

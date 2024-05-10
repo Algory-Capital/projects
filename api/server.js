@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const express = require("express");
 const bodyParser = require("body-parser");
 const _ = require("lodash");
-const yfin = require("yahoo-finance");
 const cors = require("cors");
 const fetch = require("node-fetch");
 // const yfin2 = require("yahoo-finance2");
