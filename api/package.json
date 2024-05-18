@@ -12,5 +12,8 @@
     "path": "^0.12.7",
     "pug": "^3.0.2",
     "yahoo-finance": "^0.3.8"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
