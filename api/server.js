@@ -476,7 +476,7 @@ app.get("/getData", async function (req, res) {
   if (today_ts > aum_date_ts) {
     console.log("Update data. Detected recentDate < today");
     // Update data. Detected recentDate < today
-    js = await updatePosData(aumResults.dates.at(-1), today);
+    //js = await updatePosData(aumResults.dates.at(-1), today);
     //aumResults = await updateAUM2();
   }
 
