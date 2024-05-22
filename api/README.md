@@ -18,6 +18,3 @@ Check out live dashboard at https://algorycapital.com/performance
 
 - Ticker
   - Array with JSON (keys: date, adjClose)
-
-> [!WARNING]
-> DO <strong>NOT</strong> USE REST CLIENT ["@polygon.io/client-js"](https://github.com/polygon-io/client-js)

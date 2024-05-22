@@ -67,7 +67,6 @@ var startDates = [];
 function unix_to_date(unix_ts) {
   // convert unix to our date format
   // Polygon provides timestamp in unix
-  console.log(unix_ts);
   var date = new Date(unix_ts);
 
   // Create our formatted string
@@ -87,16 +86,16 @@ function build_polygon_URL(ticker, start_date, end_date) {
 }
 
 async function polygon_historical(tickers, start_date, end_date) {
-  console.log("POLYGON HISTORICAL CALLED");
+  //console.log("POLYGON HISTORICAL CALLED");
 
   return new Promise((resolve, reject) => {
     let res = {};
     const promises = []; // Array to store promises from API calls
 
     tickers.forEach((ticker, idx) => {
-      console.log("TICKER: " + ticker);
+      //console.log("TICKER: " + ticker);
       try {
-        console.log("Dates: " + startDates[idx] + " : " + end_date);
+        //console.log("Dates: " + startDates[idx] + " : " + end_date);
 
         // replace for BRK-B edge case
         const promise = rest.stocks
@@ -249,24 +248,23 @@ async function updateAUM2() {
   var addToAUM = [];
   var newDates = [];
 
-  console.log(Object.values(js));
+  //console.log(Object.values(js));
 
   var posBenchmark = Object.values(js)[0];
 
-  console.log(posBenchmark.dates.length);
+  //console.log(posBenchmark.dates.length);
   for (let i = posBenchmark.dates.length - 1; i >= 0; i--) {
-    console.log(
-      "JDKFL: " + posBenchmark.dates[i],
-      posBenchmark.dates.length,
-      compareTimes(aumResults.dates.at(-1), posBenchmark.dates[i])
-    );
+    // console.log(
+    //   "JDKFL: " + posBenchmark.dates[i],
+    //   posBenchmark.dates.length,
+    //   compareTimes(aumResults.dates.at(-1), posBenchmark.dates[i])
+    // );
   }
   for (
     let i = posBenchmark.dates.length - 1;
     compareTimes(aumResults.dates.at(-1), posBenchmark.dates[i]) <= 0;
     i--
   ) {
-    console.log(i);
     var newdate = posBenchmark.dates[i];
     newDates.unshift(newdate);
     addToAUM.unshift(cash);
@@ -294,8 +292,6 @@ async function updateAUM2() {
 
   console.log("ADD TO AUM: ", addToAUM);
   console.log("new Dates: ", newDates);
-
-  console.log();
 
   await AUMData.findOneAndUpdate(
     { _id: aumResults._doc._id.toHexString() },
@@ -333,7 +329,6 @@ function compareTimes(t1, t2) {
    *  1: t1 > t2
    */
   if (t1 == t2) {
-    console.log("DETECTED EQUA: " + t1, t2);
     return 0;
   }
 
@@ -359,8 +354,6 @@ async function updatePosData(startDate, endDate) {
       return JSON.parse(res);
     }
   );
-
-  console.log(data);
 
   const processTickerData = async (ticker) => {
     if (ticker !== "SPY") {
@@ -415,7 +408,7 @@ async function updatePosData(startDate, endDate) {
     }
   }
 
-  console.log(`START DATE ${startDate}, END DATE: ${endDate}`);
+  console.log(`UPDATEPOS: START DATE ${startDate}, END DATE: ${endDate}`);
 
   var { tickers, js } = await getPosData();
   return js;
@@ -479,11 +472,11 @@ app.get("/getData", async function (req, res) {
 
   const recentDate = JSON.stringify(spy.at(-1).date);
   //const recentDate = JSON.stringify(spy[0].date).slice(1, 11);
-  console.log(
-    new Date(recentDate).getTime(),
-    new Date(aumResults.dates.at(-1)).getTime(),
-    new Date(recentDate).getTime() < new Date(aumResults.dates.at(-1)).getTime()
-  );
+  // console.log(
+  //   new Date(recentDate).getTime(),
+  //   new Date(aumResults.dates.at(-1)).getTime(),
+  //   new Date(recentDate).getTime() < new Date(aumResults.dates.at(-1)).getTime()
+  // );
   const today_ts = new Date(today).getTime();
   const aum_date_ts = new Date(aumResults.dates.at(-1)).getTime();
 
@@ -511,7 +504,7 @@ app.get("/getData", async function (req, res) {
 
   // console.log("spy length: " + spy.length);
   // console.log("SPY 0: ", spy[0]);
-  console.log("DATES: " + recentDate + " : " + aumResults.dates.at(-1));
+  console.log("GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1));
   console.log(oldestDate);
   res.send(js);
 });
