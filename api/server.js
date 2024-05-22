@@ -67,15 +67,23 @@ var startDates = [];
 function unix_to_date(unix_ts) {
   // convert unix to our date format
   // Polygon provides timestamp in unix
+  console.log(unix_ts);
   var date = new Date(unix_ts);
 
   // Create our formatted string
-  var year = date.getUTCFullYear();
-  var month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+  var year = date.getFullYear();
+  var month = (date.getMonth() + 1).toString().padStart(2, "0");
   var day = date.getDate().toString().padStart(2, "0");
 
   // Build string: YYYY-MM-DD
   return year + "-" + month + "-" + day;
+}
+
+function build_polygon_URL(ticker, start_date, end_date) {
+  // GET request to Polygon Stocks Aggregate Bars
+  // date format: YYYY-MM-DD
+  let tkr = ticker.toUpperCase().replace("-", ".");
+  return `https://api.polygon.io/v2/aggs/ticker/${tkr}/range/1/day/${start_date}/${end_date}?adjusted=true&sort=asc&apiKey=${POLY_API_KEY}`;
 }
 
 async function polygon_historical(tickers, start_date, end_date) {
@@ -124,10 +132,10 @@ async function polygon_historical(tickers, start_date, end_date) {
             });
 
             //res[ticker] = res[ticker].reverse();
-            res[ticker].sort((a, b) => {
-              return compareTimes(a.date, b.date);
-            });
-            console.log(res[ticker]);
+            // res[ticker].sort((a, b) => {
+            //   return compareTimes(a.date, b.date);
+            // });
+            //console.log(res[ticker]);
           });
         promises.push(promise);
       } catch (error) {
@@ -138,7 +146,7 @@ async function polygon_historical(tickers, start_date, end_date) {
 
     Promise.all(promises)
       .then(() => {
-        console.log("RETURNING:", res);
+        //console.log("RETURNING:", res);
         resolve(JSON.stringify(res));
       })
       .catch((error) => {
@@ -312,6 +320,8 @@ async function resetAUM() {
   cash = 100000;
   startDate = "2022-10-05";
 
+  var { tickers, js } = getPosData();
+
   for (var [ticker, data] of Object.entries(js)) {
   }
 }
@@ -352,45 +362,40 @@ async function updatePosData(startDate, endDate) {
 
   console.log(data);
 
-  for (const ticker in data) {
-    if (ticker != "SPY") {
-      var adjClose = [];
-      var dates = [];
+  const processTickerData = async (ticker) => {
+    if (ticker !== "SPY") {
       var tickData = data[ticker];
+      adjClose = Array(tickData.length).fill(-1);
+      dates = Array(tickData.length).fill(-1);
+      let tickDate;
+
       for (var i = tickData.length - 1; i >= 0; i--) {
-        if (
-          tickData[i].date != null &&
-          tickData[i].adjClose != null &&
-          compareTimes(tickData.startDate, tickData[i].date) >= 0
-        ) {
-          // If the date doesn't exist. TODO: Check if dates are handled differently
-          if (
-            // Custom comparator function
-            compareTimes(
-              JSON.stringify(tickData[i].date),
-              tickData.startDate
-            ) >= 0
-          ) {
-            console.log(
-              "OKKKK: " +
-                JSON.stringify(tickData[i].date) +
-                " " +
-                js[ticker]._doc.dates.at(0)
-            );
-            adjClose.push(tickData[i].adjClose);
-            dates.push(JSON.stringify(tickData[i].date).slice(1, 11));
+        //console.log(i);
+        if (tickData[i].date != null && tickData[i].adjClose != null) {
+          tickDate = JSON.stringify(tickData[i].date).slice(1, 11);
+          //console.log(tickDate, js[ticker]._doc.startDate);
+
+          if (tickDate >= js[ticker]._doc.startDate) {
+            adjClose[i] = tickData[i].adjClose;
+            dates[i] = tickDate;
+          } else {
+            adjClose[i] = null;
+            dates[i] = null;
           }
         } else {
-          // Something is wrong with the stock's data for that specific date
-          // or, data before startDate
-          adjClose.push(null);
-          dates.push(null);
+          adjClose[i] = null;
+          dates[i] = null;
         }
+
+        // console.log(
+        //   tickData[i].date,
+        //   dates[i],
+        //   tickData[i].date == dates[i]
+        // );
       }
 
-      console.log(`Data: ${JSON.stringify(adjClose)}`);
-      console.log(`Dates: ${JSON.stringify(dates)}`);
-
+      // adjClose.reverse();
+      // dates.reverse();
       var ret = await Equity.findOneAndUpdate(
         { ticker: ticker },
         {
@@ -402,7 +407,15 @@ async function updatePosData(startDate, endDate) {
         { new: true }
       );
     }
+  };
+
+  for (const ticker of tickers) {
+    if (ticker != "SPY") {
+      await processTickerData(ticker);
+    }
   }
+
+  console.log(`START DATE ${startDate}, END DATE: ${endDate}`);
 
   var { tickers, js } = await getPosData();
   return js;
@@ -428,6 +441,7 @@ function getLaterDate(ts1, ts2) {
 
 // VERSION 2 of obtaining data
 app.get("/getData", async function (req, res) {
+  //GETDATA ROUTE
   var { tickers, js } = await getPosData();
   var aumResults = await AUMData.find({});
   aumResults = aumResults[0];
@@ -498,6 +512,7 @@ app.get("/getData", async function (req, res) {
   // console.log("spy length: " + spy.length);
   // console.log("SPY 0: ", spy[0]);
   console.log("DATES: " + recentDate + " : " + aumResults.dates.at(-1));
+  console.log(oldestDate);
   res.send(js);
 });
 
@@ -988,6 +1003,101 @@ app.get("/delete/:ticker", function (req, res) {
       res.send(`Successfully deleted ${ticker} from database`);
     }
   });
+});
+
+app.get("/testPolygon", async function (req, res) {
+  // test route for ensuring polygon api call is correct
+  console.log("GET POLYGON 1");
+  let tkrs = ["MSFT"];
+  const data = await polygon_historical(tkrs, "2022-12-05", "2024-05-20");
+  // .then(
+  //   (res) => {
+  //     return JSON.parse(res);
+  //   }
+  // );
+  console.log("GET POLYGON");
+
+  res.send(data);
+});
+
+app.get("/testDateParse", async function (req, res) {
+  var update = {};
+  var startDate = "2022-10-05";
+  var endDate = "2024-05-20";
+  var { tickers, js } = await getPosData();
+  tickers.push("SPY");
+
+  const data = await polygon_historical(tickers, startDate, endDate).then(
+    (res) => {
+      return JSON.parse(res);
+    }
+  );
+  var update = {};
+
+  console.log(data);
+
+  for (const ticker of tickers) {
+    if (ticker != "SPY") {
+      var tickData = data[ticker];
+      // var adjClose = Array(tickData.length).fill(-1);
+      // var dates = Array(tickData.length).fill(-1);
+      var adjClose;
+      var dates;
+
+      const processTickerData = async (ticker) => {
+        if (ticker !== "SPY") {
+          adjClose = Array(tickData.length).fill(-1);
+          dates = Array(tickData.length).fill(-1);
+          // var tickData = data[ticker];
+          let tickDate;
+
+          for (var i = tickData.length - 1; i >= 0; i--) {
+            //console.log(i);
+            if (tickData[i].date != null && tickData[i].adjClose != null) {
+              tickDate = JSON.stringify(tickData[i].date).slice(1, 11);
+              //console.log(tickDate, js[ticker]._doc.startDate);
+
+              if (tickDate >= js[ticker]._doc.startDate) {
+                adjClose[i] = tickData[i].adjClose;
+                dates[i] = tickDate;
+              } else {
+                adjClose[i] = null;
+                dates[i] = null;
+              }
+            } else {
+              adjClose[i] = null;
+              dates[i] = null;
+            }
+
+            // console.log(
+            //   tickData[i].date,
+            //   dates[i],
+            //   tickData[i].date == dates[i]
+            // );
+          }
+
+          // adjClose.reverse();
+          // dates.reverse();
+
+          update[ticker] = {
+            data: adjClose,
+            dates: dates,
+          };
+        }
+      };
+
+      for (const ticker of tickers) {
+        await processTickerData(ticker);
+      }
+    }
+
+    update["data"] = adjClose;
+    update["dates"] = dates;
+  }
+  console.log(tickData);
+  console.log("DONE");
+
+  res.send(update);
 });
 
 let port = process.env.PORT;
