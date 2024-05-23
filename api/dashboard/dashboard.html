@@ -28,8 +28,8 @@
     <link rel="stylesheet" href="assets/styles.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.2/fetch.min.js" integrity="sha512-1Gn7//DzfuF67BGkg97Oc6jPN6hqxuZXnaTpC9P5uw8C6W4yUNj5hoS/APga4g1nO2X6USBb/rXtGzADdaVDeA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type = "module" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script type = "module" src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.2/fetch.min.js" integrity="sha512-1Gn7//DzfuF67BGkg97Oc6jPN6hqxuZXnaTpC9P5uw8C6W4yUNj5hoS/APga4g1nO2X6USBb/rXtGzADdaVDeA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js" integrity="sha512-DmQnZdEjFh4R/040JxDSg3j9cS8D0oC5u2noG9Az18F11leiDFwrTOkm9PP+jdBMiH66QBa73O+54kZr5FyU7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   </head>
@@ -184,6 +184,8 @@
         result => result.json()).then(
           async (output) => {
             // Loader
+            console.log(`OUTPUT RECEIVED: Line 187`)
+            console.log(output)
             var loader = document.getElementById("preloader");
             loader.style.display = "none";
 
@@ -240,7 +242,6 @@
                 var chartColor = '#a62727'
               }
               
-
               if (assetClass[tickers[i-1]] == "E"){
                 countEquity += 1;
                 let data = pos.data;
@@ -387,6 +388,7 @@
                 );
                 var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
                 sparkPosition.render();
+                //console.log(`RENDERED spark${i}. ${document.querySelector(`#spark${i}`)}`)
               } 
               else {
                 countFI += 1;

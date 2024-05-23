@@ -66,13 +66,13 @@ var startDates = [];
 
 function unix_to_date(unix_ts) {
   // convert unix to our date format
-  // Polygon provides timestamp in unix
+  // Polygon provides timestamp in unix, UTC/GMT TIME
   var date = new Date(unix_ts);
 
   // Create our formatted string
-  var year = date.getFullYear();
-  var month = (date.getMonth() + 1).toString().padStart(2, "0");
-  var day = date.getDate().toString().padStart(2, "0");
+  var year = date.getUTCFullYear();
+  var month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+  var day = date.getUTCDate().toString().padStart(2, "0");
 
   // Build string: YYYY-MM-DD
   return year + "-" + month + "-" + day;
@@ -504,7 +504,9 @@ app.get("/getData", async function (req, res) {
 
   // console.log("spy length: " + spy.length);
   // console.log("SPY 0: ", spy[0]);
-  console.log("GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1));
+  console.log(
+    "GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1)
+  );
   console.log(oldestDate);
   res.send(js);
 });
@@ -1091,6 +1093,67 @@ app.get("/testDateParse", async function (req, res) {
   console.log("DONE");
 
   res.send(update);
+});
+
+app.get("/testAUMRESET", async function (req, res) {
+  var { tickers, js } = await getPosData();
+
+  console.log("JKLDF");
+
+  var aumResults = await AUMData.find({});
+  aumResults = aumResults[0];
+
+  var cash = aumResults.cash;
+  var addToAUM = [];
+  let tmpAUM;
+
+  var dates = ["2022-10-05", "2022-10-06"].concat(
+    js["AAPL"].dates.filter((arg) => arg != null)
+  );
+
+  console.log(dates.length);
+
+  for (let i = 0; i < dates.length; i++) {
+    console.log(cash);
+    tmpAUM = cash;
+    for (const ticker of tickers) {
+      if (i > js[ticker].data.length) {
+        // address CLOA edge case
+        //console.log(ticker);
+        continue;
+      }
+
+      if (dates.at(-i) == js[ticker]._doc.startDate) {
+        //console.log(cash, cash + js[ticker]._doc.entryPrice);
+        cash += js[ticker]._doc.entryPrice * js[ticker]._doc.shares;
+        tmpAUM += js[ticker]._doc.entryPrice * js[ticker]._doc.shares;
+        continue;
+      }
+      tmpAUM +=
+        js[ticker].data.at(-i) != null
+          ? js[ticker].data.at(-i) * js[ticker]._doc.shares
+          : 0;
+    }
+    //console.log(tmpAUM - cash);
+    console.log(cash);
+    addToAUM.push(Math.round((tmpAUM + Number.EPSILON) * 100) / 100);
+  }
+
+  addToAUM.reverse();
+
+  let resJSON = { date: dates, data: addToAUM };
+  // await AUMData.findOneAndUpdate(
+  //   { _id: aumResults._doc._id.toHexString() },
+  //   {
+  //     $push: {
+  //       data: { $each: addToAUM },
+  //       dates: { $each: dates },
+  //     },
+  //   },
+  //   { new: true }
+  // );
+
+  res.send(resJSON);
 });
 
 let port = process.env.PORT;
