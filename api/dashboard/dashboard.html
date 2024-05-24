@@ -246,6 +246,16 @@
                 countEquity += 1;
                 let data = pos.data;
                 let dates = pos.dates;
+                
+                let tmp = data.map(function(element){
+                            if (element != null) {
+                              return Number(element.toFixed(2));
+                            } else {
+                              return element
+                            }
+                        })
+                
+                        console.log(tmp, typeof(tmp))
                 var sparkOpt = {
                   series: [
                     {
@@ -299,7 +309,7 @@
                     decimalsInFloat: 2,
                   },
                   responsive: [{
-                    breakpoint: 600,
+                    //breakpoint: 600,
                     options: {
                       title: {
                         style: {
@@ -386,9 +396,24 @@
                     ])
                   )
                 );
-                var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
-                sparkPosition.render();
+                // var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
+                // console.log(`Spark ${i}: `, sparkPosition)
+                // sparkPosition.render().then(() => console.log(`RENDERED spark ${i}`)).catch((err)=> {console.error(err)});
                 //console.log(`RENDERED spark${i}. ${document.querySelector(`#spark${i}`)}`)
+
+                const chartElement = document.querySelector(`#spark${i}`);
+                if (chartElement) {
+                    var sparkPosition = new ApexCharts(chartElement, sparkOpt);
+                    console.log(`Spark ${i}: `, sparkPosition);
+
+                    await sparkPosition.render()
+                        .then(() => console.log(`RENDERED spark ${i}`))
+                        .catch((err) => {
+                            console.error(`Error rendering spark ${i}:`, err);
+                        });
+                } else {
+                    console.error(`Element #spark${i} not found`);
+                }
               } 
               else {
                 countFI += 1;
@@ -452,7 +477,7 @@
                     decimalsInFloat: 2,
                   },
                   responsive: [{
-                    breakpoint: 600,
+                    //breakpoint: 600,
                     options: {
                       title: {
                         style: {
@@ -661,7 +686,7 @@
                 },
               },
               responsive: [{
-                breakpoint: 600,
+                //breakpoint: 600,
                 options: {
                   title: {
                     text: "AUM",
@@ -789,7 +814,7 @@
               },
               //Max-width: 500
               responsive: [{
-                breakpoint: 600,
+                //breakpoint: 600,
                 options: {
                   dataLabels: {
                     style: {
