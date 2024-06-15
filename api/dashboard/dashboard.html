@@ -179,6 +179,7 @@
       //   )
       //   return { payoutRatio, payout, frequency }
       // }
+      document.addEventListener("DOMContentLoaded", function() {
 
       fetch("http://localhost:3000/getData").then(
         result => result.json()).then(
@@ -982,6 +983,7 @@
             location.reload();
           });
         })
+      })
 
 
     </script>
