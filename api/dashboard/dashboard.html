@@ -256,6 +256,8 @@
                         })
                 
                         console.log(tmp, typeof(tmp))
+                
+                // asset charts
                 var sparkOpt = {
                   series: [
                     {
@@ -307,6 +309,8 @@
                   yaxis: {
                     forceNiceScale: true,
                     decimalsInFloat: 2,
+                    min: Math.min(...data) * 0.9,
+                    max: Math.max(...data) * 1.1
                   },
                   responsive: [{
                     //breakpoint: 600,
@@ -475,6 +479,7 @@
                   yaxis: {
                     forceNiceScale: true,
                     decimalsInFloat: 2,
+                    type: "numeric",
                   },
                   responsive: [{
                     //breakpoint: 600,
