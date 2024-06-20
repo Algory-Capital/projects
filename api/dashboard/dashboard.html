@@ -327,6 +327,7 @@
                         }
                       },
                       series: [{
+                          name: tickers[i-1],
                           data: data.filter(Number)
                       }],
                       labels: dates.slice(dates.length - data.filter(Number).length, dates.length)
