@@ -315,7 +315,7 @@
                     min: Math.min(...data) * 0.9,
                     max: Math.max(...data) * 1.1
                   },
-                  responsive: [{
+                  /*responsive: [{
                     //breakpoint: 600,
                     options: {
                       title: {
@@ -334,7 +334,7 @@
                       }],
                       labels: dates.slice(dates.length - data.filter(Number).length, dates.length)
                     }
-                  }]
+                  }]*/
                 };
 
                 // calculate position details
@@ -869,7 +869,6 @@
 
             var aumSwitch = $("#aum-switch")[0];
             aumSwitch.addEventListener('change', e => {
-              return;
               if (e.target.checked === true) {
                 ApexCharts.exec('aum-chart');
 
