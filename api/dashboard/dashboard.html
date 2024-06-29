@@ -180,8 +180,9 @@
       //   return { payoutRatio, payout, frequency }
       // }
       document.addEventListener("DOMContentLoaded", function() {
-
-      fetch("http://localhost:3000/getData").then(
+      // http://localhost:3000/getData
+      // https://algoryapi.herokuapp.com/getData
+      fetch("https://algoryapi.herokuapp.com/getData").then(
         result => result.json()).then(
           async (output) => {
             // Loader
