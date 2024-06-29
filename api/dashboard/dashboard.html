@@ -869,6 +869,7 @@
 
             var aumSwitch = $("#aum-switch")[0];
             aumSwitch.addEventListener('change', e => {
+              return;
               if (e.target.checked === true) {
                 ApexCharts.exec('aum-chart');
 
