@@ -180,6 +180,13 @@
       //   )
       //   return { payoutRatio, payout, frequency }
       // }
+      function timeout(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      async function wait(sec) {
+        await timeout(sec * 1000);
+        return;
+      }
       document.addEventListener("DOMContentLoaded", function() {
       // http://localhost:3000/getData
       // https://algoryapi.herokuapp.com/getData
@@ -576,7 +583,9 @@
                   )
                 );
                 var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
+                await wait(5);
                 sparkPosition.render();
+                await wait(5);
               }
             }
 
@@ -738,7 +747,9 @@
 
 
             var aumChart = new ApexCharts(document.querySelector('#aum'), aumOpt);
+            await wait(5);
             aumChart.render();
+            await wait(5);
 
 
             // moving on to donut chart
