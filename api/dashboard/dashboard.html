@@ -583,11 +583,11 @@
                   )
                 );
                 var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
-                await wait(5);
                 sparkPosition.render();
-                await wait(5);
               }
             }
+
+            return;
 
 
             // moving on to AUM
@@ -747,10 +747,7 @@
 
 
             var aumChart = new ApexCharts(document.querySelector('#aum'), aumOpt);
-            await wait(5);
             aumChart.render();
-            await wait(5);
-
 
             // moving on to donut chart
 
