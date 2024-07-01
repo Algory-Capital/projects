@@ -8,7 +8,6 @@ const fetch = require("node-fetch");
 require("dotenv").config();
 
 const { restClient } = require("@polygon.io/client-js");
-// const { start } = require("repl");
 
 var path = require("path");
 const { start } = require("repl");
