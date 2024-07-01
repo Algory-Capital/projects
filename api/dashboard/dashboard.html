@@ -3,6 +3,8 @@ to access api, visit https://algoryapi.herokuapp.com/getData
 *** JS and CSS have to be in the same file under script and 
 style tags because this is pasted into a raw HTML block 
 on our Wix site ***-->
+
+<!-- CodePen: https://codepen.io/Fobertree/pen/BaegMKY -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -285,7 +287,10 @@ on our Wix site ***-->
                     height: 250,
                     type: "area",
                     group: "detail",
-                    id: "areachart-1"
+                    id: "areachart-1",
+                    animations: {
+                      enabled:false
+                    }
                   },
                   colors: [chartColor],
                   dataLabels: {
