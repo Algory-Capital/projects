@@ -1,3 +1,16 @@
+# Algory Dashboard
+
+Created by Anay Roge, maintained by Alexander Liu.
+
+Currently down. While our dashboard works on localhost and CodePen, it is crashing on Wix due to ApexCharts refresh routines.
+
+## Possible fixes
+
+- Contact Wix
+- Vero by Wix?
+- Switch libaries
+- External website embed
+
 ## Using the api
 
 To add a position, go to www.algoryapi.herokuapp.com/addPos
@@ -18,3 +31,7 @@ Check out live dashboard at https://algorycapital.com/performance
 
 - Ticker
   - Array with JSON (keys: date, adjClose)
+
+## Backups
+
+- [ApexCharts Backup (CodePen)](https://codepen.io/Fobertree/pen/BaegMKY)
