@@ -2,14 +2,12 @@
 
 Created by Anay Roge, maintained by Alexander Liu.
 
-Currently down. While our dashboard works on localhost and CodePen, it is crashing on Wix due to ApexCharts refresh routines.
+## To-Do
 
-## Possible fixes
-
-- Contact Wix
-- Vero by Wix?
-- Switch libaries
-- External website embed
+- Vet getData and updateAUM routes
+- Find AUM backup method
+- Build DB Backup
+- Update sellPos route
 
 ## Using the api
 
@@ -26,6 +24,15 @@ Check out live dashboard at https://algorycapital.com/performance
 [Polygon Library](https://www.npmjs.com/package/@polygon.io/client-js?ref=polygon.io)
 
 [Ticker Historical API Call](https://polygon.io/docs/stocks/get_v2_aggs_ticker__stocksticker__range__multiplier___timespan___from___to)
+
+### Api Routes
+
+- /getData
+
+### Debug Routes
+
+- /testAUM2
+- /testPolygon
 
 ### JSON formatting
 

@@ -196,8 +196,6 @@ on our Wix site ***-->
         result => result.json()).then(
           async (output) => {
             // Loader
-            console.log(`OUTPUT RECEIVED: Line 187`)
-            console.log(output)
             var loader = document.getElementById("preloader");
             loader.style.display = "none";
 
@@ -266,8 +264,6 @@ on our Wix site ***-->
                               return element
                             }
                         })
-                
-                        console.log(tmp, typeof(tmp))
                 
                 // asset charts
                 var sparkOpt = {
@@ -413,18 +409,12 @@ on our Wix site ***-->
                     ])
                   )
                 );
-                // var sparkPosition = new ApexCharts(document.querySelector(`#spark${i}`), sparkOpt);
-                // console.log(`Spark ${i}: `, sparkPosition)
-                // sparkPosition.render().then(() => console.log(`RENDERED spark ${i}`)).catch((err)=> {console.error(err)});
-                //console.log(`RENDERED spark${i}. ${document.querySelector(`#spark${i}`)}`)
-
+                
                 const chartElement = document.querySelector(`#spark${i}`);
                 if (chartElement) {
                     var sparkPosition = new ApexCharts(chartElement, sparkOpt);
-                    console.log(`Spark ${i}: `, sparkPosition);
 
                     await sparkPosition.render()
-                        .then(() => console.log(`RENDERED spark ${i}`))
                         .catch((err) => {
                             console.error(`Error rendering spark ${i}:`, err);
                         });
@@ -493,6 +483,8 @@ on our Wix site ***-->
                     forceNiceScale: true,
                     decimalsInFloat: 2,
                     type: "numeric",
+                    min: Math.min(...data) * 0.9,
+                    max: Math.max(...data) * 1.5
                   },
                   responsive: [{
                     //breakpoint: 600,
@@ -988,7 +980,7 @@ on our Wix site ***-->
 
           }
         ).catch((err) => {
-          console.log(err);
+          console.error(err);
           $(".errorCard").css("display", "flex");
           $(".errorCard")[0].addEventListener('click', e => {
             location.reload();

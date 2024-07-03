@@ -27,6 +27,9 @@ mongoose.connect(
   "mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algoryPortDB"
 );
 
+// if debugMode = true, do not push to db
+const debugMode = true;
+
 const divSchema = {
   lastUpdate: String,
   payoutRatio: Number,
@@ -236,7 +239,7 @@ async function getPosData() {
 }
 
 // VERSION 2 Updates the AUM until the last stored position data
-async function updateAUM2() {
+async function updateAUM2(excludeStartDate = true) {
   // calculate AUM from current db collection
   var { tickers, js } = await getPosData();
 
@@ -289,8 +292,27 @@ async function updateAUM2() {
     return Number(arg);
   });
 
+  if (excludeStartDate) {
+    if (
+      addToAUM === undefined ||
+      addToAUM.length == 0 ||
+      newDates === undefined ||
+      newDates.length == 0
+    ) {
+      console.error("Detected empty addToAUM or newDates in updateAUM2.");
+      return;
+    }
+    addToAUM.shift();
+    newDates.shift();
+  }
+
   console.log("ADD TO AUM: ", addToAUM);
   console.log("new Dates: ", newDates);
+
+  if (debugMode) {
+    var res = { addtoAUM: addToAUM, newDates: newDates };
+    return res;
+  }
 
   await AUMData.findOneAndUpdate(
     { _id: aumResults._doc._id.toHexString() },
@@ -354,7 +376,9 @@ async function updatePosData(startDate, endDate) {
     }
   );
 
-  const processTickerData = async (ticker) => {
+  console.log("OK");
+
+  const processTickerData = async (ticker, excludeStartDate = true) => {
     if (ticker !== "SPY") {
       var tickData = data[ticker];
       adjClose = Array(tickData.length).fill(-1);
@@ -388,6 +412,26 @@ async function updatePosData(startDate, endDate) {
 
       // adjClose.reverse();
       // dates.reverse();
+      if (excludeStartDate) {
+        if (
+          adjClose === undefined ||
+          adjClose.length == 0 ||
+          dates === undefined ||
+          dates.length == 0
+        ) {
+          console.error(
+            "Detected empty adjClose or dates in processTickerData."
+          );
+          return;
+        }
+        adjClose.shift();
+        dates.shift();
+      }
+
+      console.log("MEOW", dates[0], dates.at(-1));
+
+      if (debugMode) return;
+
       var ret = await Equity.findOneAndUpdate(
         { ticker: ticker },
         {
@@ -399,7 +443,7 @@ async function updatePosData(startDate, endDate) {
         { new: true }
       );
     }
-  };
+  }; // end processTickerData function
 
   for (const ticker of tickers) {
     if (ticker != "SPY") {
@@ -445,45 +489,34 @@ app.get("/getData", async function (req, res) {
 
   var oldestDate = findEarliestDate(startDates);
 
-  // const spy = await yfin.historical({
-  //   symbol: "SPY",
-  //   from: oldestDate,
-  //   to: today,
-  //   period: "d",
-  // });
   const spy = await polygon_historical(["spy"], oldestDate, today).then(
     (res) => {
       return JSON.parse(res)["spy"];
     }
   );
-  //spy = JSON.parse(spy)["spy"];
-
-  //console.log("SPY in getData", spy);
 
   var spyData = [];
   var spyDates = [];
-  //let i = spy.length - 1; i >= 0; i--
   for (let i = 0; i < spy.length; i++) {
     spyData.push(spy[i].adjClose);
     spyDates.push(JSON.stringify(spy[i].date));
-    //spyDates.push(JSON.stringify(spy[i].date).slice(1, 11));
   }
 
   const recentDate = JSON.stringify(spy.at(-1).date);
-  //const recentDate = JSON.stringify(spy[0].date).slice(1, 11);
-  // console.log(
-  //   new Date(recentDate).getTime(),
-  //   new Date(aumResults.dates.at(-1)).getTime(),
-  //   new Date(recentDate).getTime() < new Date(aumResults.dates.at(-1)).getTime()
-  // );
+
   const today_ts = new Date(today).getTime();
   const aum_date_ts = new Date(aumResults.dates.at(-1)).getTime();
 
   if (today_ts > aum_date_ts) {
-    console.log("Update data. Detected recentDate < today");
+    // this logic needs to get refactored to last close
+    console.log(
+      `Update data. Detected recentDate < today. Today: ${new Date(
+        today
+      )}. Previous Date: ${new Date(aumResults.dates.at(-1))}`
+    );
     // Update data. Detected recentDate < today
-    //js = await updatePosData(aumResults.dates.at(-1), today);
-    //aumResults = await updateAUM2();
+    js = await updatePosData(aumResults.dates.at(-1), today);
+    aumResults = await updateAUM2();
   }
 
   js["SPY"] = {
@@ -498,226 +531,12 @@ app.get("/getData", async function (req, res) {
     dates: aumResults.dates,
   };
 
-  // console.log("SPY DATA: " + spyData);
-  // console.log("\n\nSPY DATES: " + spyDates);
-
-  // console.log("spy length: " + spy.length);
-  // console.log("SPY 0: ", spy[0]);
   console.log(
     "GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1)
   );
   console.log(oldestDate);
   res.send(js);
 });
-
-// DEPRECATED v1 of obtaining data (never persisted data in db so i made v2)
-app.get("/getDataOld", function (req, res) {
-  Equity.find({}).then(function (results, err) {
-    if (err) {
-      console.log(err);
-      res.send(err);
-    } else {
-      var js = {};
-      var tickers = [];
-      var startDates = [];
-      var aumDates = [];
-      var shares = [];
-      var entryPrice = [];
-      var divInfo = [];
-      var assetClass = [];
-      results.forEach(function (result) {
-        tickers.push(result.ticker);
-        startDates.push(result.startDate);
-        shares.push(result.shares);
-        entryPrice.push(result.entryPrice);
-        divInfo.push(result.divInfo);
-        assetClass.push(result.assetClass);
-      });
-      tickers.push("SPY");
-
-      var oldestDate = findEarliestDate(startDates);
-      startDates.push(oldestDate);
-
-      var oldestTicker = tickers[startDates.indexOf(oldestDate)];
-
-      getData(tickers, oldestDate)
-        .then((data) => {
-          // DO NOT USE FOR IN
-          for (let ticker of Object.keys(data)) {
-            var adjClose = [];
-            var dates = [];
-            var idx = tickers.indexOf(ticker);
-            for (var i = data[ticker].length - 1; i >= 0; i--) {
-              if (data[ticker][i].adjClose != null) {
-                adjClose.push(data[ticker][i].adjClose);
-                dates.push(JSON.stringify(data[ticker][i].date).slice(1, 11));
-              }
-            }
-
-            var start = dates.indexOf(startDates[idx]);
-            adjClose = adjClose.slice(start);
-
-            js[ticker] = {
-              shares: shares[idx],
-              entryPrice: entryPrice[idx],
-              entryDate: startDates[idx],
-              data: adjClose,
-              dates: dates,
-              divInfo: divInfo[idx],
-              assetClass: assetClass[idx],
-            };
-          }
-
-          for (var [ticker, value] of Object.entries(js)) {
-            if (ticker != oldestTicker) {
-              if (value.dates.length == js[oldestTicker].dates.length) {
-                for (
-                  var i = value.data.length;
-                  i < js[oldestTicker].data.length;
-                  i++
-                ) {
-                  value.data.unshift(null);
-                }
-              } else {
-                while (value.data.length != value.dates.length) {
-                  value.data.unshift(null);
-                }
-              }
-            }
-          }
-
-          //check if aum collection has any documents
-          AUMData.find({}).then((aumResults, err) => {
-            if (err) {
-              console.log(err);
-            } else {
-              var spy = js["SPY"];
-              if (aumResults.length == 0) {
-                let cash = 100536.24;
-                updateAUM(spy.dates.at(0), spy, js, cash).then((result) => {
-                  // drop previously populated AUM collection
-                  // AUMData.deleteMany({}, (err, results) => {
-                  //   if (err) {
-                  //     console.log(err);
-                  //   }
-                  // });
-
-                  var newAUMData = new AUMData({
-                    cash: result.cash,
-                    data: result.aum,
-                    dates: spy.dates,
-                  });
-                  newAUMData.save();
-                  js["AUM"] = {
-                    cash: result.cash,
-                    aum: result.aum,
-                    dates: spy.dates,
-                  };
-                  res.send(js);
-                });
-              } else {
-                var aum = aumResults[0];
-                if (aum.dates.at(-1) < spy.dates.at(-1)) {
-                  let updateStartDate = spy.dates.at(
-                    spy.dates.indexOf(aum.dates.at(-1)) + 1
-                  );
-
-                  // var assetWorth = [];
-                  // for (var [ticker, value] of Object.entries(js)) {
-                  //   if (ticker != 'SPY'){
-                  //     assetWorth.push(Number.parseFloat(value.shares * value.data.at(-1).toFixed(2)));
-                  //   }
-                  // }
-                  // cash = Number.parseFloat((aum.data.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2));
-                  updateAUM(updateStartDate, spy, js, aum.cash).then(
-                    (result) => {
-                      let newDates = spy.dates.slice(
-                        spy.dates.indexOf(aum.dates.at(-1)) + 1
-                      );
-                      AUMData.findOneAndUpdate(
-                        { _id: aum._id.toHexString() },
-                        {
-                          $push: {
-                            data: result.aum,
-                            dates: newDates,
-                          },
-                          cash: result.cash,
-                        },
-                        (err, testResult) => {
-                          if (err) {
-                            console.log(err);
-                          }
-                          AUMData.findOne(
-                            { _id: aum._id.toHexString() },
-                            (err, testResult) => {
-                              js["AUM"] = {
-                                cash: testResult.cash,
-                                aum: testResult.data,
-                                dates: testResult.dates,
-                              };
-                              res.send(js);
-                            }
-                          );
-                        }
-                      );
-                    }
-                  );
-                } else {
-                  js["AUM"] = {
-                    cash: aum.cash,
-                    aum: aum.data,
-                    dates: aum.dates,
-                  };
-                  res.send(js);
-                }
-              }
-            }
-          });
-
-          // Update AUM
-          // for (let i = 0; i < js[oldestTicker].data.length; i++) {
-          //   let addToAUM = 0;
-          //   for (let [ticker, value] of Object.entries(js).slice(0, -1)) {
-          //     let data = value.data;
-          //     if (i == 0 && data[i] != null) {
-          //       addToAUM += ((data[i] - value.entryPrice) * js[ticker].shares);
-          //     } else {
-          //       if (data[i] != null && data[i-1] != null) {
-          //         addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
-          //       }
-          //     }
-          //     addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000038847;
-          //   }
-          //   aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
-          //   aumDates.push(js[oldestTicker].dates[i]);
-          //   if (i == 0) {aum.shift();}
-          // }
-
-          // js["AUM"] = {
-          //   dates: aumDates,
-          //   aum: aum,
-          // }
-        })
-        .catch((err) => {
-          res.send(err);
-          console.log(err);
-        });
-    }
-  });
-});
-
-// app.get("/", async function (req, res) {
-//   console.log("SDJFKLSD");
-//   const oldestDate = new Date().toJSON().slice(0, 10);
-//   const today = new Date().toJSON().slice(0, 10);
-//   let spy = await polygon_historical(["spy"], "2022-01-01", "2023-08-31").then(
-//     () => {
-//       console.log("MEOW");
-//     }
-//   );
-
-//   console.log("SPY", spy);
-// });
 
 // Actual interface to adding a position
 app.get("/addPos", function (req, res) {
@@ -747,13 +566,6 @@ app.post("/addPos", function (req, res) {
       };
       res.render("error", { card });
     } else {
-      // const data = await yfin.historical({
-      //   symbol: ticker,
-      //   from: startDate,
-      //   to: today,
-      //   period: "d",
-      // });
-
       const data = await polygon_historical([ticker], startDate, today).then(
         (res) => {
           return JSON.parse(res);
@@ -1014,84 +826,10 @@ app.get("/testPolygon", async function (req, res) {
   res.send(data);
 });
 
-app.get("/testDateParse", async function (req, res) {
-  var update = {};
-  var startDate = "2022-10-05";
-  var endDate = "2024-05-20";
-  var { tickers, js } = await getPosData();
-  tickers.push("SPY");
+app.get("/testAUM2", async function (req, res) {
+  aum = await updateAUM2();
 
-  const data = await polygon_historical(tickers, startDate, endDate).then(
-    (res) => {
-      return JSON.parse(res);
-    }
-  );
-  var update = {};
-
-  console.log(data);
-
-  for (const ticker of tickers) {
-    if (ticker != "SPY") {
-      var tickData = data[ticker];
-      // var adjClose = Array(tickData.length).fill(-1);
-      // var dates = Array(tickData.length).fill(-1);
-      var adjClose;
-      var dates;
-
-      const processTickerData = async (ticker) => {
-        if (ticker !== "SPY") {
-          adjClose = Array(tickData.length).fill(-1);
-          dates = Array(tickData.length).fill(-1);
-          // var tickData = data[ticker];
-          let tickDate;
-
-          for (var i = tickData.length - 1; i >= 0; i--) {
-            //console.log(i);
-            if (tickData[i].date != null && tickData[i].adjClose != null) {
-              tickDate = JSON.stringify(tickData[i].date).slice(1, 11);
-              //console.log(tickDate, js[ticker]._doc.startDate);
-
-              if (tickDate >= js[ticker]._doc.startDate) {
-                adjClose[i] = tickData[i].adjClose;
-                dates[i] = tickDate;
-              } else {
-                adjClose[i] = null;
-                dates[i] = null;
-              }
-            } else {
-              adjClose[i] = null;
-              dates[i] = null;
-            }
-
-            // console.log(
-            //   tickData[i].date,
-            //   dates[i],
-            //   tickData[i].date == dates[i]
-            // );
-          }
-
-          // adjClose.reverse();
-          // dates.reverse();
-
-          update[ticker] = {
-            data: adjClose,
-            dates: dates,
-          };
-        }
-      };
-
-      for (const ticker of tickers) {
-        await processTickerData(ticker);
-      }
-    }
-
-    update["data"] = adjClose;
-    update["dates"] = dates;
-  }
-  console.log(tickData);
-  console.log("DONE");
-
-  res.send(update);
+  res.send(aum);
 });
 
 app.get("/testAUMRESET", async function (req, res) {
