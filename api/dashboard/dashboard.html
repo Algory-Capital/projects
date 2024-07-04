@@ -925,10 +925,12 @@ on our Wix site ***-->
               aumYTDPerData = [];
               spyYTDPerData = [];
               aumNewDates = aumDates.slice(idx);
+              // tmp fix. Need to debug data later
+              let offset = 1;
 
               for (let i = idx; i < aumDates.length; i++) {
                 aumYTDPerData.push(Number(((aum[i] - aum.at(idx)) / aum.at(idx) * 100).toFixed(3)));
-                spyYTDPerData.push(Number(((output["SPY"].data[i] - output["SPY"].data[idx]) / output["SPY"].data[idx] * 100).toFixed(3)));
+                spyYTDPerData.push(Number(((output["SPY"].data[i-offset] - output["SPY"].data[idx-offset]) / output["SPY"].data[idx-offset] * 100).toFixed(3)));
               }
 
               let aumYTD = aumYTDPerData.at(-1).toFixed(2);
@@ -959,6 +961,7 @@ on our Wix site ***-->
                 })
                 return aumVsSPY
               } else {
+                console.log(aumYTD, aumVsSPY)
                 return { aumYTD, aumVsSPY };
               }
             }
@@ -973,6 +976,7 @@ on our Wix site ***-->
             })
             $("#start-input-submit")[0].addEventListener('click', e => {
               date = $("#start-input")[0].value
+              console.log(date)
               newSPYComp = updateAUM(date, true);
               $("#aumVsSPY").html(`<p id="aumVsSPY"><strong>vs S&P*: </strong> ${newSPYComp}%</p>`);
               $("#aumDisclaimer").html(`*Benchmarked Algory Portfolio to SPY starting from ${date}`);

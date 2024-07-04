@@ -300,7 +300,7 @@ async function updateAUM2(excludeStartDate = true) {
       newDates.length == 0
     ) {
       console.error("Detected empty addToAUM or newDates in updateAUM2.");
-      return;
+      return aumResults;
     }
     addToAUM.shift();
     newDates.shift();
@@ -310,8 +310,11 @@ async function updateAUM2(excludeStartDate = true) {
   console.log("new Dates: ", newDates);
 
   if (debugMode) {
-    var res = { addtoAUM: addToAUM, newDates: newDates };
-    return res;
+    // var res = { addtoAUM: addToAUM, newDates: newDates };
+    // return res;
+    const newData = await AUMData.find({});
+    console.log(newData);
+    return newData[0];
   }
 
   await AUMData.findOneAndUpdate(
