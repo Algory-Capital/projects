@@ -284,7 +284,7 @@ async function updateAUM2(excludeStartDate = true) {
       addToAUM[0] += Number.parseFloat(price * shares);
       addToAUM[0] = Math.round((addToAUM[0] + Number.EPSILON) * 100) / 100;
 
-      console.log("NEW AUM: " + addToAUM[0], typeof addToAUM[0]);
+      //console.log("NEW AUM: " + addToAUM[0], typeof addToAUM[0]);
     }
   }
   // issue: not casting properly to Number for addToAUM
@@ -428,8 +428,6 @@ async function updatePosData(startDate, endDate) {
         dates.shift();
       }
 
-      console.log("MEOW", dates[0], dates.at(-1));
-
       if (debugMode) return;
 
       var ret = await Equity.findOneAndUpdate(
@@ -531,10 +529,10 @@ app.get("/getData", async function (req, res) {
     dates: aumResults.dates,
   };
 
-  console.log(
-    "GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1)
-  );
-  console.log(oldestDate);
+  // console.log(
+  //   "GETDATA: DATES: " + recentDate + " : " + aumResults.dates.at(-1)
+  // );
+  // console.log(oldestDate);
   res.send(js);
 });
 
