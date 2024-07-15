@@ -702,10 +702,12 @@ body.addPosBody,
 }
 
 .posButton {
-  background-color: #303245;
-  color: #ee99;
-  width: 50%;
+  background-color: #08d;
+  color: white;
+  width: 35%;
+  display:inline-block;
   border-radius: 10px;
-  height: 5vh;
   margin-top: 10px;
+  padding: 1vh;
+  text-decoration: none;
 }

@@ -695,7 +695,7 @@ app.get(
 
 // Sell Position.
 
-app.get("sellPos", function (req, res) {
+app.get("/sellPos", function (req, res) {
   res.render("sellPos");
 });
 

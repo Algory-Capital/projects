@@ -1,9 +1,9 @@
 doctype html
-- const addingPos = true;
+- const sellingPos = true;
 head
     meta(charset="UTF-8")
     meta(name="viewport" content="width=device-width, initial-scale=1.0")
-    title Add a Position 
+    title Sell a Position 
     link(rel="stylesheet", href="../assets/styles.css")
     script(src="../assets/scripts.js")
 
@@ -24,7 +24,7 @@ body#tsparticles(class="sellPosBody")
             .title Welcome 
             .subtitle Sell a position to the Algory Dashboard
 
-            .posButton(href="addPos") ADD A POSITION
+            a.posButton(href = "/addPos" type="button") ADD A POSITION
 
             .input-container.ic1
                 input#ticker.input(placeholder="" type="text" name="ticker")
