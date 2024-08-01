@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import json
 from bson import json_util
+from datetime import datetime
 
 # CWD must be api
 
@@ -20,25 +21,28 @@ def parse_json(data):
     return json.loads(json_util.dumps(data))
 
 
-def equities_to_json(path="equities.json"):
+def equities_to_json(path="equities.json",timestr = "NONE"):
     data = {}
 
     for i in equities_collection.find():
         data[i["ticker"]] = parse_json(i)
 
-    with open(os.path.join("dbbackup/Data", path), "w") as f:
+    with open(os.path.join("dbbackup/Data", f"{path}:{timestr}"), "w") as f:
         json.dump(data, f)
 
 
-def aum_to_json(path="aum.json"):
+def aum_to_json(path="aum.json", timestr = "NONE"):
 
     for i in aum_collection.find():
         data = parse_json(i)
 
-    with open(os.path.join("dbbackup/Data", path), "w") as f:
+    with open(os.path.join("dbbackup/Data", f"{path}:{timestr}"), "w") as f:
         json.dump(data, f)
 
 
 if __name__ == "__main__":
-    equities_to_json()
-    aum_to_json()
+    now = datetime.now()
+    timestr = now.strftime("%m/%d/%Y, %H:%M:%S")
+
+    equities_to_json(timestr=timestr)
+    aum_to_json(timestr = timestr)

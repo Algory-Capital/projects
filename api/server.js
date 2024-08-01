@@ -834,6 +834,7 @@ app.get("/testAUM2", async function (req, res) {
 });
 
 app.get("/testAUMRESET", async function (req, res) {
+  // full AUM reset in case things go wrong
   var { tickers, js } = await getPosData();
 
   console.log("JKLDF");
