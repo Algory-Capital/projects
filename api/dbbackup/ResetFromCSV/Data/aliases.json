@@ -2,7 +2,7 @@
   "tickers": {
     "BLACKROCK TREASURY TRUST INSTL 10" : "CASH",
     "APPLE INC USD 0.00001" : "AAPL",
-    "BERKSHIRE HATHAWAY INC SH B 0.0033" : "BRK.B",
+    "BERKSHIRE HATHAWAY INC SH B 0.0033" : "BRK-B",
     "RITHM CAPI COM NPV" : "RITM",
     "JPMORGAN CHASE + CO USD 1.0" : "JPM",
     "FIRST REP BK SAN FRANCISCO USD 0.01" : "FRBK",
@@ -29,42 +29,42 @@
         {
             "date": "2023-04-14",
             "type": "PUT",
-            "asset": "SPDR",
+            "asset": "SPY",
             "strike": "393.00"
         },
     "SPDR S+P 500 406.0 PUT 28APR23" :
     {
         "exp_date": "2023-04-28",
         "type": "PUT",
-        "asset": "SPDR",
+        "asset": "SPY",
         "strike": "406.00"
     },
     "SPDR S+P 500 393.0 PUT 13APR23" :
     {
         "exp_date": "2023-04-13",
         "type": "PUT",
-        "asset": "SPDR",
+        "asset": "SPY",
         "strike": "393.00"
     },
     "SEPTEMBER 23 CALLS ON VIX 17.000000": 
     {
         "exp_date": "2023-09-23",
         "type": "CALL",
-        "asset": "VIX",
+        "asset": "^VIX",
         "strike": "17.00"
     },
     "NOVEMBER 23 CALLS ON VIX 17.000000": 
     {
         "exp_date": "2023-11-23",
         "type": "CALL",
-        "asset": "VIX",
+        "asset": "^VIX",
         "strike": "17.00"
     },
     "INVESCO QQQ 389.0 CALL 19JAN24": 
     {
         "exp_date": "2024-01-24",
         "type": "CALL",
-        "asset": "VIX",
+        "asset": "^VIX",
         "strike": "389.00"
     },
     "INVESCO QQQ 389.0 PUT 19JAN24": 

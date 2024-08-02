@@ -5,6 +5,7 @@ from datetime import datetime
 # only get historical dividends
 
 class DividendObject:
+    # probably make this more for logging
     def __init__(self, name, dates):
         self.dates = dates
         self.name = name

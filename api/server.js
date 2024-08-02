@@ -28,7 +28,7 @@ mongoose.connect(
 );
 
 // if debugMode = true, do not push to db
-const debugMode = true;
+const debugMode = false;
 
 const divSchema = {
   lastUpdate: String,
@@ -88,16 +88,13 @@ function build_polygon_URL(ticker, start_date, end_date) {
 }
 
 async function polygon_historical(tickers, start_date, end_date) {
-  //console.log("POLYGON HISTORICAL CALLED");
 
   return new Promise((resolve, reject) => {
     let res = {};
     const promises = []; // Array to store promises from API calls
 
     tickers.forEach((ticker, idx) => {
-      //console.log("TICKER: " + ticker);
       try {
-        //console.log("Dates: " + startDates[idx] + " : " + end_date);
 
         // replace for BRK-B edge case
         const promise = rest.stocks
@@ -110,8 +107,6 @@ async function polygon_historical(tickers, start_date, end_date) {
           )
           .then((data) => {
             res[ticker] = [];
-
-            //console.log("TICKER: " + ticker + " Data: " + JSON.stringify(data));
 
             if (data.results == undefined) {
               return;
@@ -131,12 +126,6 @@ async function polygon_historical(tickers, start_date, end_date) {
                 res[ticker].push(tkrData);
               }
             });
-
-            //res[ticker] = res[ticker].reverse();
-            // res[ticker].sort((a, b) => {
-            //   return compareTimes(a.date, b.date);
-            // });
-            //console.log(res[ticker]);
           });
         promises.push(promise);
       } catch (error) {
@@ -147,7 +136,6 @@ async function polygon_historical(tickers, start_date, end_date) {
 
     Promise.all(promises)
       .then(() => {
-        //console.log("RETURNING:", res);
         resolve(JSON.stringify(res));
       })
       .catch((error) => {
@@ -180,16 +168,13 @@ async function polygon_historical(tickers, start_date, end_date) {
 // DIVIDEND IMPLEMENTATION FROM POLYGON. Limited 5 queries per minute
 // TODO: rewrite?
 async function getDivUpdate(ticker, value, spy) {
-  // console.log(ticker);
   // target ex_dividend_date
   var addToAUM = 0;
   fetch(fetchURL + ticker)
     .then((result) => result.json())
     .then(async (output) => {
       if (output.results != undefined && output.results.length > 0) {
-        // console.log(ticker, value)
         for (const divEntry of output.results) {
-          // console.log(`${ticker} last update: ${value.divInfo.lastUpdate} ? ${divEntry.ex_dividend_date}`)
           if (divEntry.ex_dividend_date > spy.dates.at(-1)) {
             continue;
           } else if (divEntry.ex_dividend_date == value.divInfo.lastUpdate) {
@@ -214,7 +199,6 @@ async function getDivUpdate(ticker, value, spy) {
           }
         }
       }
-      console.log(addToAUM);
       return addToAUM;
     });
 }
@@ -250,18 +234,8 @@ async function updateAUM2(excludeStartDate = true) {
   var addToAUM = [];
   var newDates = [];
 
-  //console.log(Object.values(js));
-
   var posBenchmark = Object.values(js)[0];
 
-  //console.log(posBenchmark.dates.length);
-  for (let i = posBenchmark.dates.length - 1; i >= 0; i--) {
-    // console.log(
-    //   "JDKFL: " + posBenchmark.dates[i],
-    //   posBenchmark.dates.length,
-    //   compareTimes(aumResults.dates.at(-1), posBenchmark.dates[i])
-    // );
-  }
   for (
     let i = posBenchmark.dates.length - 1;
     compareTimes(aumResults.dates.at(-1), posBenchmark.dates[i]) <= 0;
@@ -270,21 +244,17 @@ async function updateAUM2(excludeStartDate = true) {
     var newdate = posBenchmark.dates[i];
     newDates.unshift(newdate);
     addToAUM.unshift(cash);
-    //TODO: retroactively add cash when date reached
-    // f
+
     let price, shares;
 
     for (var [ticker, data] of Object.entries(js)) {
       //reverse this
       var idx = data.dates.indexOf(newdate);
-      //console.log(data.data[idx], data.shares);
       price = data.data[idx] || 0;
       shares = data.shares || 0;
 
       addToAUM[0] += Number.parseFloat(price * shares);
       addToAUM[0] = Math.round((addToAUM[0] + Number.EPSILON) * 100) / 100;
-
-      //console.log("NEW AUM: " + addToAUM[0], typeof addToAUM[0]);
     }
   }
   // issue: not casting properly to Number for addToAUM
@@ -306,10 +276,7 @@ async function updateAUM2(excludeStartDate = true) {
     newDates.shift();
   }
 
-  console.log("ADD TO AUM: ", addToAUM);
-  console.log("new Dates: ", newDates);
-
-  if (debugMode) {
+  if (debugMode === true) {
     // var res = { addtoAUM: addToAUM, newDates: newDates };
     // return res;
     const newData = await AUMData.find({});
@@ -379,8 +346,6 @@ async function updatePosData(startDate, endDate) {
     }
   );
 
-  console.log("OK");
-
   const processTickerData = async (ticker, excludeStartDate = true) => {
     if (ticker !== "SPY") {
       var tickData = data[ticker];
@@ -389,10 +354,8 @@ async function updatePosData(startDate, endDate) {
       let tickDate;
 
       for (var i = tickData.length - 1; i >= 0; i--) {
-        //console.log(i);
         if (tickData[i].date != null && tickData[i].adjClose != null) {
           tickDate = JSON.stringify(tickData[i].date).slice(1, 11);
-          //console.log(tickDate, js[ticker]._doc.startDate);
 
           if (tickDate >= js[ticker]._doc.startDate) {
             adjClose[i] = tickData[i].adjClose;
@@ -431,7 +394,7 @@ async function updatePosData(startDate, endDate) {
         dates.shift();
       }
 
-      if (debugMode) return;
+      // if (debugMode === true) return;
 
       var ret = await Equity.findOneAndUpdate(
         { ticker: ticker },
@@ -443,6 +406,8 @@ async function updatePosData(startDate, endDate) {
         },
         { new: true }
       );
+
+      console.log("PUSHING DATA")
     }
   }; // end processTickerData function
 

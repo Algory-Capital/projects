@@ -29,9 +29,11 @@ class Master:
 
         self.aum = [0] * self.n_dates
         self.cashArr = [0] * self.n_dates
+        self.total = [0] * self.n_dates
 
         self.EQUITY = Equity(self.n_dates)
-        self.ETF = Equity(self.n_dates)
+        # two below objects will be used for logging purposes
+        self.ETF = ETF(self.n_dates)
         self.DIV = Dividend(self.n_dates)
 
         # we expect that excel is sorted to avoid amortized O(N^2), although time complexity shouldn't matter here
@@ -46,11 +48,14 @@ class Master:
         for i in range(self.cur_idx,idx):
             # fill dates without orders
             self.cashArr[i] = self.cur_cash
+            self.aum[i] = self.EQUITY.get_aum_value(idx=idx)
 
         # update cash at requested date
 
         self.cur_cash += cash
         self.cashArr[idx] = self.cur_cash
+
+        self.aum[idx] = self.EQUITY.get_aum_value(idx=idx)
 
         self.cur_idx = idx + 1
 
@@ -58,12 +63,15 @@ class Master:
         for i in range(self.cur_idx,idx):
             # fill dates without orders
             self.cashArr[i] = self.cur_cash
+            self.aum[i] = self.EQUITY.get_aum_value(idx=idx)
 
         # update cash at requested date
         assert (self.cur_cash >= cash)
 
         self.cur_cash -= cash
         self.cashArr[idx] = self.cur_cash
+
+        self.aum[idx] = self.EQUITY.get_aum_value(idx=idx)
 
         self.cur_idx = idx + 1
 
@@ -76,8 +84,15 @@ class Master:
         for i in range(self.cur_idx, self.n_dates):
             # fill dates without orders
             self.cashArr[i] = self.cur_cash
+            if i == self.n_dates - 1:
+                self.aum[i] = self.aum[i-1]
+                continue
+            self.aum[i] = self.EQUITY.get_aum_value(idx=i)
         
-        self.cashArr = Master.round_all(self.cashArr)
+        for i, (cash, aum) in enumerate(zip(self.cashArr, self.aum)):
+            self.total[i] = cash + aum
+        
+        self.total = Master.round_all(self.total)
 
     def process_order(self, ord : pd.Series):
         order_name = ord['Security Name']
@@ -124,10 +139,12 @@ class Master:
         # otherwise, best solution is to check if "PUT" or "CALL" in string or if is in opt_aliases
         elif transact_type == "Buy":
             self.inc_cash(cash = amt, idx = date_idx)
+            self.EQUITY.buy_stock(tkr,units,date)
             pass
             
         elif transact_type == "Sell":
             self.dec_cash(cash = amt, idx = date_idx)
+            self.EQUITY.sell_stock(tkr,units,date)
             pass
         
         else:
@@ -169,7 +186,11 @@ if __name__ == "__main__":
     print(os.getcwd())
 
     master = Master("dbbackup/ResetFromCSV")
-    print(master.cashArr)
+    #print(master.total)
+
+    print(master.aum)
+    print(master.EQUITY.holdings)
+    print([(d,t) for d,t in zip(master.dates, master.total)])
 
     #print(master.cashArr)
     # 'c:\\Users\\Alexa\\OneDrive - Emory University\\Desktop\\Emory Club Projects\\Algory\\projects\\api\\dbbackup\\ResetFromCSV'
