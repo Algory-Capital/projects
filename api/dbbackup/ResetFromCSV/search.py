@@ -19,6 +19,7 @@ def index (x: str | float, a: List[str | float] = sd.dates) -> int:
         return i
 
     print("WARNING: cannot find date: ", x)
+    print(f"Cannot locate date: {x}. Last date in array: {a[-1]}. Length: {len(a)}. i: {i}.")
     return i + 1
     
     raise ValueError(f"Cannot Find date: {x}")

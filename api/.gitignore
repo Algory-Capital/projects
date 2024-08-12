@@ -9,3 +9,5 @@ dbbackup/Data
 *.ipynb
 *.xls
 equity_data.csv
+
+backup.py

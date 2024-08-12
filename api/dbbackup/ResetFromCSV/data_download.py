@@ -79,7 +79,7 @@ def get_tickers_data(tickers : List[str], start_date="2022-08-01", end_date=date
     print(spy_data.tail())
 
     if csv:
-        spy_data.to_csv(os.path.join(root, "spy_index.csv"), index=True)
+        spy_data.to_csv(os.path.join(root, "equity_data.csv"), index=True)
 
     return spy_data
 
