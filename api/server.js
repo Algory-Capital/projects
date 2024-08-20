@@ -28,7 +28,7 @@ mongoose.connect(
 );
 
 // if debugMode = true, do not push to db
-const debugMode = false;
+const debugMode = true;
 
 const divSchema = {
   lastUpdate: String,
@@ -394,7 +394,7 @@ async function updatePosData(startDate, endDate) {
         dates.shift();
       }
 
-      // if (debugMode === true) return;
+      if (debugMode === true) return;
 
       var ret = await Equity.findOneAndUpdate(
         { ticker: ticker },
