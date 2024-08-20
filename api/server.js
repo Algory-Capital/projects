@@ -28,7 +28,7 @@ mongoose.connect(
 );
 
 // if debugMode = true, do not push to db
-const debugMode = true;
+const debugMode = false;
 
 const divSchema = {
   lastUpdate: String,
@@ -394,7 +394,7 @@ async function updatePosData(startDate, endDate) {
         dates.shift();
       }
 
-      if (debugMode === true) return;
+      //if (debugMode === true) return;
 
       var ret = await Equity.findOneAndUpdate(
         { ticker: ticker },
@@ -447,7 +447,13 @@ app.get("/getData", async function (req, res) {
   var { tickers, js } = await getPosData();
   var aumResults = await AUMData.find({});
   aumResults = aumResults[0];
-  const today = new Date().toJSON().slice(0, 10);
+  
+  var date = new Date();
+  // NASQAD + NYSE close hour 21 UTC
+  // 86400000 = 24 * 60 * 60 * 1000
+  // mark last date to yesterday IF AND ONLY IF market's have not closed today.
+  // i know this is spaghetti but js is spaghetti anyways. I need to migrate this to typescript
+  const today = date.getUTCHours() >= 21 ? date.toJSON().slice(0, 10) : new Date(date.getTime() - 86400000).toJSON().slice(0,10);
 
   Object.values(js).forEach((val) => {
     startDates.push(val.startDate);

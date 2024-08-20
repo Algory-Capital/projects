@@ -6,8 +6,9 @@ Created by Anay Roge, maintained by Alexander Liu.
 
 - Vet getData and updateAUM routes
 - Find AUM backup method
-- Build DB Backup
-- Update sellPos route
+- Change the "tech stack"
+  - Migrate JS/Express to TypeScript/Express
+  - Possible idea: move API code to Python with AWS Lambda URL routes
 
 ## Using the api
 
