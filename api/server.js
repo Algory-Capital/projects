@@ -284,16 +284,16 @@ async function updateAUM2(excludeStartDate = true) {
     return newData[0];
   }
 
-  await AUMData.findOneAndUpdate(
-    { _id: aumResults._doc._id.toHexString() },
-    {
-      $push: {
-        data: { $each: addToAUM },
-        dates: { $each: newDates },
-      },
-    },
-    { new: true }
-  );
+  // await AUMData.findOneAndUpdate(
+  //   { _id: aumResults._doc._id.toHexString() },
+  //   {
+  //     $push: {
+  //       data: { $each: addToAUM },
+  //       dates: { $each: newDates },
+  //     },
+  //   },
+  //   { new: true }
+  // );
 
   const newData = await AUMData.find({});
 
