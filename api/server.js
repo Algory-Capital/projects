@@ -92,47 +92,52 @@ async function polygon_historical(tickers, start_date, end_date) {
   return new Promise((resolve, reject) => {
     let res = {};
     const promises = []; // Array to store promises from API calls
+    console.log("TICKERS: ", tickers)
 
-    tickers.forEach((ticker, idx) => {
-      try {
-
-        // replace for BRK-B edge case
-        const promise = rest.stocks
-          .aggregates(
-            ticker.toUpperCase().replace("-", "."),
-            1,
-            "day",
-            start_date,
-            end_date
-          )
-          .then((data) => {
-            res[ticker] = [];
-
-            if (data.results == undefined) {
-              return;
-            }
-
-            data.results.forEach((arg) => {
-              let ts = unix_to_date(arg.t);
-
-              if (compareTimes(ts, startDates[idx]) <= 0) {
-                res[ticker].push({ adjClose: null, date: null });
-              } else {
-                let tkrData = {
-                  adjClose: arg.c,
-                  date: ts,
-                };
-
-                res[ticker].push(tkrData);
+    try {
+      tickers.forEach((ticker, idx) => {
+        try {
+          // replace for BRK-B edge case
+          const promise = rest.stocks
+            .aggregates(
+              ticker.toUpperCase().replace("-", "."),
+              1,
+              "day",
+              start_date,
+              end_date
+            )
+            .then((data) => {
+              res[ticker] = [];
+  
+              if (data.results == undefined) {
+                return;
               }
+  
+              data.results.forEach((arg) => {
+                let ts = unix_to_date(arg.t);
+  
+                if (compareTimes(ts, startDates[idx]) <= 0) {
+                  res[ticker].push({ adjClose: null, date: null });
+                } else {
+                  let tkrData = {
+                    adjClose: arg.c,
+                    date: ts,
+                  };
+  
+                  res[ticker].push(tkrData);
+                }
+              });
             });
-          });
-        promises.push(promise);
-      } catch (error) {
-        console.error("ERROR OCCURRED IN POLYGON_HISTORICAL: " + error);
-        //reject(error);
-      }
-    });
+          promises.push(promise);
+        } catch (error) {
+          console.error("ERROR OCCURRED IN POLYGON_HISTORICAL: " + error);
+          //reject(error);
+        }
+      });
+    } catch (error) {
+      console.error("INVALID ERROR WITH FOREACH IN POLYGON_HISTORICAL: ", tickers)
+    }
+    
 
     Promise.all(promises)
       .then(() => {
@@ -674,7 +679,7 @@ app.get("/sellPos", function (req, res) {
 app.post("/sellPos", function (req, res) {
   const ticker = req.body.ticker.toUpperCase();
   const startDate = req.body.startdate;
-  const startPrice = req.body.sellprice;
+  const sellPrice = req.body.sellprice;
   const shares = req.body.shares;
   const assetClass = req.body.assetclass.toUpperCase();
   const today = new Date().toJSON().slice(0, 10);
@@ -693,68 +698,95 @@ app.post("/sellPos", function (req, res) {
       };
       res.render("error", { card });
     } else {
+
+      console.log("TICKER DATA IN /SELLPOS: ", {ticker})
       // const data = await yfin.historical({
       //   symbol: ticker,
       //   from: startDate,
       //   to: today,
       //   period: "d",
       // });
+      // SEEMS TO BREAK HERE
 
-      const data = await polygon_historical({ ticker }, startDate, today).then(
-        (res) => {
-          return JSON.parse(res);
-        }
-      );
+      // const data = await polygon_historical({ ticker }, startDate, today).then(
+      //   (res) => {
+      //     return JSON.parse(res);
+      //   }
+      // );
 
-      var adjClose = [];
-      var dates = [];
+      // var adjClose = [];
+      // var dates = [];
 
-      for (var i = data.length - 1; i >= 0; i--) {
-        if (data[i].adjClose != null) {
-          adjClose.push(data[i].adjClose);
-          dates.push(JSON.stringify(data[i].date).slice(1, 11));
-        }
+      // for (var i = data.length - 1; i >= 0; i--) {
+      //   if (data[i].adjClose != null) {
+      //     adjClose.push(data[i].adjClose);
+      //     dates.push(JSON.stringify(data[i].date).slice(1, 11));
+      //   }
+      // }
+
+      // const aumResults = await AUMData.find({});
+      // aumDates = aumResults[0].dates;
+
+      // // Update AUM until entry date of new position (edge case)
+      // if (aumDates.at(-1) < startDate) {
+      //   //await updatePosData(aumDates.at(-1), startDate);
+      //   await updateAUM2();
+      // }
+      // for (var i = aumDates.indexOf(dates[0]) - 1; i >= 0; i--) {
+      //   dates.unshift(aumDates[i]);
+      //   adjClose.unshift(null);
+      // }
+
+      // const newCash = (aumResults[0].cash + sellPrice * shares).toFixed(2);
+      // var newaum = await AUMData.findOneAndUpdate(
+      //   { _id: aumResults[0]._doc._id },
+      //   {
+      //     $set: {
+      //       cash: newCash,
+      //     },
+      //   }
+      // );
+      const jsonFoundList = foundList.toObject();
+
+      var newEquityData = {};
+      const newShares = jsonFoundList.shares - shares;
+
+      if (newShares == 0)
+      {
+        // Call delete
+        console.log("SELL ALL OF TICKER:  ", ticker)
+        // "/delete/:ticker"
+
+      }
+      else if(newShares < 0)
+      {
+        var card = {
+          status: "Something went wrong",
+          message: `Not enough shares of ${ticker} to sell. Inputed shares to sell: ${shares}`,
+          buttons: [{ text: "Back to Form", link: "/sellPos" }],
+        };
+        res.render("error", { card });
       }
 
-      const aumResults = await AUMData.find({});
-      aumDates = aumResults[0].dates;
+      // for weighted avg price
+      const weightedAvgPrice = ((jsonFoundList.startprice * jsonFoundList.shares - shares * sellPrice) / (newShares)).toFixed(2);
 
-      // Update AUM until entry date of new position (edge case)
-      if (aumDates.at(-1) < startDate) {
-        //await updatePosData(aumDates.at(-1), startDate);
-        await updateAUM2();
-      }
-      for (var i = aumDates.indexOf(dates[0]) - 1; i >= 0; i--) {
-        dates.unshift(aumDates[i]);
-        adjClose.unshift(null);
-      }
+      // var updatedPosition = new Equity({
+      //   _id : jsonFoundList.id,
+      //   ticker: ticker,
+      //   startDate: startDate,
+      //   entryPrice: jsonFoundList.price,
+      //   shares: shares,
+      // });
 
-      const newCash = (aumResults[0].cash + startPrice * shares).toFixed(2);
-      var newaum = await AUMData.findOneAndUpdate(
-        { _id: aumResults[0]._doc._id },
-        {
-          $set: {
-            cash: newCash,
-          },
-        }
-      );
+      const updatedPosition = await Equity.findByIdAndUpdate(jsonFoundList._id, {$set : { entryPrice : jsonFoundList.price}, $set : {shares : newShares} })
+      console.log("UPDATED POSITION FORM SELL: ", updatedPosition)
 
-      var newPosition = new Equity({
-        ticker: ticker,
-        startDate: startDate,
-        entryPrice: startPrice,
-        shares: shares,
-        divInfo: dividend,
-        assetClass: assetClass,
-        data: adjClose,
-        dates: dates,
-      });
-
-      await newPosition.save();
+      //await updatedPosition.save();
 
       var card = {
         status: "Success!",
-        message: `Successfully added ${ticker} to portfolio`,
+        message: `Successfully sold ${ticker} from portfolio`,
         buttons: [
           {
             text: "Go to Dashboard",
