@@ -559,28 +559,28 @@ app.post("/addPos", function (req, res) {
         }
       }
 
-      const aumResults = await AUMData.find({});
-      let aumDates = aumResults[0].dates;
+      // const aumResults = await AUMData.find({});
+      // let aumDates = aumResults[0].dates;
 
-      // Update AUM until entry date of new position (edge case)
-      if (aumDates.at(-1) < startDate) {
-        await updatePosData(aumDates.at(-1), startDate);
-        await updateAUM2();
-      }
-      for (var i = aumDates.indexOf(dates[0]) - 1; i >= 0; i--) {
-        dates.unshift(aumDates[i]);
-        adjClose.unshift(null);
-      }
+      // // Update AUM until entry date of new position (edge case)
+      // if (aumDates.at(-1) < startDate) {
+      //   await updatePosData(aumDates.at(-1), startDate);
+      //   await updateAUM2();
+      // }
+      // for (var i = aumDates.indexOf(dates[0]) - 1; i >= 0; i--) {
+      //   dates.unshift(aumDates[i]);
+      //   adjClose.unshift(null);
+      // }
 
-      const newCash = (aumResults[0].cash - startPrice * shares).toFixed(2);
-      var newaum = await AUMData.findOneAndUpdate(
-        { _id: aumResults[0]._doc._id },
-        {
-          $set: {
-            cash: newCash,
-          },
-        }
-      );
+      // const newCash = (aumResults[0].cash - startPrice * shares).toFixed(2);
+      // var newaum = await AUMData.findOneAndUpdate(
+      //   { _id: aumResults[0]._doc._id },
+      //   {
+      //     $set: {
+      //       cash: newCash,
+      //     },
+      //   }
+      // );
 
       var newPosition = new Equity({
         ticker: ticker,
