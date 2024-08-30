@@ -58,11 +58,12 @@ const aumDataSchema = {
 
 const AUMData = mongoose.model("AUMData", aumDataSchema);
 
+// CHECK IF API KEY IS PROPERLY LOADED FROM YOUR ENV
 const apikey = process.env.POLY_API_KEY;
 const fetchURL =
   "https://api.polygon.io/v3/reference/dividends?apiKey=" + apikey + "&ticker=";
 
-const rest = restClient(process.env.POLY_API_KEY);
+const rest = restClient(apikey);
 
 var startDates = [];
 
@@ -428,6 +429,50 @@ async function updatePosData(startDate, endDate) {
   return js;
 }
 
+async function updateAUMCash() {
+  var aumResults = await AUMData.find();
+  aumResults = aumResults[0];
+
+  //console.log("AUM RESULTS", aumResults)
+
+  var curCash = aumResults["cash"];
+  var lastAUMValue = aumResults["data"].at(-1);
+  var nonCashAUM = 0;
+  var holdings = await getPosData();
+  var newCash;
+  var dataArr;
+
+  console.log(holdings)
+
+  for (const [ticker, data] of Object.entries(holdings["js"])) 
+  {
+    dataArr = data["data"]
+    dataArr = Array.from(dataArr)
+    
+    let curPrice = Number(dataArr.at(-1));
+    nonCashAUM += Number((data.shares * curPrice).toFixed(2));
+
+    console.log(`ticker ${ticker}, nonCashAUM: ${nonCashAUM} shares: ${data.shares} Total: ${data.shares * curPrice}`)
+  }
+
+  var newCash = (lastAUMValue - nonCashAUM).toFixed(2);
+
+  if (newCash != curCash)
+  {
+    console.log(`Not same cash. Old cash: ${curCash}. Non-cash: ${nonCashAUM}. new Cash: ${newCash}. Updating AUM`)
+
+    let res = await AUMData.updateOne({}, {cash : newCash});
+    
+    if (res.modifiedCount == 1)
+    {
+      console.log("Successfully updated cash.")
+    }
+  }
+
+  console.log("finished cash update")
+  return newCash;
+}
+
 // Finds the earliest date given an array of dates
 function findEarliestDate(dates) {
   if (dates.length == 0) return null;
@@ -501,6 +546,8 @@ app.get("/getData", async function (req, res) {
     data: spyData,
     dates: spyDates,
   };
+
+  updateAUMCash();
 
   js["AUM"] = {
     cash: aumResults.cash,
@@ -779,7 +826,10 @@ app.post("/sellPos", function (req, res) {
       //   shares: shares,
       // });
 
-      const updatedPosition = await Equity.findByIdAndUpdate(jsonFoundList._id, {$set : { entryPrice : jsonFoundList.price}, $set : {shares : newShares} })
+      const updatedPosition = await Equity.findOneAndUpdate(
+        {ticker: ticker}, 
+        {$set : { entryPrice : jsonFoundList.price}, $set : {shares : newShares} }
+      )
       console.log("UPDATED POSITION FORM SELL: ", updatedPosition)
 
       //await updatedPosition.save();
