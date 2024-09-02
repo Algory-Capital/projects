@@ -711,3 +711,39 @@ body.addPosBody,
   padding: 1vh;
   text-decoration: none;
 }
+/* 
+.apexcharts-tooltip, .apexcharts-marker {
+  display: none !important;
+}
+
+.apexcharts-grid, .apexcharts-tooltip, .apexcharts-marker {
+  pointer-events: all;
+}
+
+.sparkPos.apexcharts-grid:hover .apexcharts-tooltip,
+.sparkPos.apexcharts-grid:hover .apexcharts-marker {
+  display: block !important;
+} */
+/* 
+.apexcharts-tooltip, .apexcharts-marker {
+  display: none;
+} */
+/* 
+.apexcharts-grid {
+  pointer-events: bounding-box !important;
+}
+
+.apexcharts-grid:hover .apexcharts-marker {
+  display: block;
+  background:red;
+}
+
+
+.apexcharts-grid:not(:hover) .apexcharts-marker {
+  display: none !important;
+  background:red;
+} */
+
+.apexcharts-marker {
+  display: none;
+}
