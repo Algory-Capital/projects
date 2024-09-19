@@ -585,11 +585,12 @@ app.post("/addPos", function (req, res) {
       // TODO: need to incorporate adding to positions
       var card = {
         status: "Something went wrong",
-        message: `${ticker} already exists in the portfolio`,
+        message: `${ticker} already exists in the portfolio. Contact Alex if you want support for adding to existing positions`,
         buttons: [{ text: "Back to Form", link: "/addPos" }],
       };
       res.render("error", { card });
     } else {
+      // create entirely new position
       const data = await polygon_historical([ticker], startDate, today).then(
         (res) => {
           return JSON.parse(res);
@@ -599,7 +600,7 @@ app.post("/addPos", function (req, res) {
       var adjClose = [];
       var dates = [];
 
-      for (var i = data.length - 1; i >= 0; i--) {
+      for (var i = 0; i < data.length; i++) {
         if (data[i].adjClose != null) {
           adjClose.push(data[i].adjClose);
           dates.push(JSON.stringify(data[i].date).slice(1, 11));
@@ -628,6 +629,11 @@ app.post("/addPos", function (req, res) {
       //     },
       //   }
       // );
+
+      console.log("ADJ CLOSE: ", adjClose);
+      console.log("DATES: ", dates);
+
+      console.log("LEN: ", data.length);
 
       var newPosition = new Equity({
         ticker: ticker,
@@ -802,6 +808,16 @@ app.post("/sellPos", function (req, res) {
       {
         // Call delete
         console.log("SELL ALL OF TICKER:  ", ticker)
+        await fetch(`https://algoryapi.herokuapp.com/delete/${ticker}`).then(() => {
+          console.log("SUCCESS DELETING ", ticker)
+        }).catch((err)=> {
+          var card = {
+            status: "Something went wrong",
+            message: `Failed to delete position: ${err}`,
+            buttons: [{ text: "Back to Form", link: "/sellPos" }],
+          };
+          res.render("error", { card });
+        })
         // "/delete/:ticker"
 
       }
@@ -868,7 +884,7 @@ app.get("/delete/:ticker", function (req, res) {
 app.get("/testPolygon", async function (req, res) {
   // test route for ensuring polygon api call is correct
   console.log("GET POLYGON 1");
-  let tkrs = ["MSFT"];
+  let tkrs = ["FSLR"];
   const data = await polygon_historical(tkrs, "2022-12-05", "2024-05-20");
   // .then(
   //   (res) => {
@@ -877,7 +893,54 @@ app.get("/testPolygon", async function (req, res) {
   // );
   console.log("GET POLYGON");
 
+
   res.send(data);
+});
+
+
+app.get("/testPolygon/:ticker&:startDate", async function (req, res) {
+  // test route for ensuring polygon api call is correct
+
+  const {ticker, startDate, startPrice, shares, asset} = req.params;
+
+  console.log("GET POLYGON 1");
+  const today = new Date().toJSON().slice(0, 10);
+  let tkrs = [ticker];
+  const data = await polygon_historical(tkrs, startDate, today)
+  .then(
+    (res) => {
+      return JSON.parse(res);
+    }
+  );
+
+  var adjClose = [];
+  var dates = [];
+
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].adjClose != null) {
+      adjClose.push(data[i].adjClose);
+      dates.push(JSON.stringify(data[i].date).slice(1, 11));
+    }
+  }
+
+  console.log("ADJ CLOSE: ", adjClose);
+  console.log("DATES: ", dates);
+
+  console.log("LEN: ", data.length , dates.length, adjClose.length);
+
+  var newData = {
+    ticker: ticker,
+    startDate: startDate,
+    data: adjClose,
+    dates: dates,
+  };
+  console.log("GET POLYGON");
+
+
+  res.send({
+    formatted: newData,
+    raw: data
+  });
 });
 
 app.get("/testAUM2", async function (req, res) {

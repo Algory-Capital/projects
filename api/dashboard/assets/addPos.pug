@@ -8,7 +8,7 @@ head
     script(src="../assets/scripts.js")
 
 body#tsparticles(class="addPosBody")
-    div.form(id="loginForm")
+    div.form(id="loginForm" disabled = isAuthenticated ? 'disabled' : false)
         .title Login
         .subtitle Please enter the password
 
@@ -34,7 +34,7 @@ body#tsparticles(class="addPosBody")
             .input-container.ic2
                 input#startdate.input(placeholder="" type="text" name="startdate")
                 #startdatediv.cut.cut-short
-                label#startdatelabel.iLabel(for="startdate") Start Date
+                label#startdatelabel.iLabel(for="startdate") Start Date (YYYY-MM-DD)
 
             .input-container.ic2
                 input#startprice.input(placeholder="" type="text" name="startprice")

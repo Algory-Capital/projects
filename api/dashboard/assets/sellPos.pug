@@ -8,7 +8,7 @@ head
     script(src="../assets/scripts.js")
 
 body#tsparticles(class="sellPosBody")
-    div.form(id="loginForm")
+    div.form(id="loginForm" disabled = isAuthenticated ? 'disabled' : false)
         .title Login
         .subtitle Please enter the password
 
