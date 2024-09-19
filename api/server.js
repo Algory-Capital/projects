@@ -528,17 +528,18 @@ app.get("/getData", async function (req, res) {
 
   const today_ts = new Date(today).getTime();
   const aum_date_ts = new Date(aumResults.dates.at(-1)).getTime();
+  var holdings_date = aumResults.holdings_date
 
-  if (today_ts > aum_date_ts) {
+  if (today_ts > holdings_date) {
     // this logic needs to get refactored to last close
     console.log(
       `Update data. Detected recentDate < today. Today: ${new Date(
         today
-      )}. Previous Date: ${new Date(aumResults.dates.at(-1))}`
+      )}. Previous Date: ${new Date(holdings_date)}`
     );
     // Update data. Detected recentDate < today
     // Holdings_date to completely separate AUM functionality from holdings
-    js = await updatePosData(aumResults.holdings_date, today);
+    js = await updatePosData(holdings_date, today);
     aumResults = await updateAUM2();
   }
 
