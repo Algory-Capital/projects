@@ -537,7 +537,8 @@ app.get("/getData", async function (req, res) {
       )}. Previous Date: ${new Date(aumResults.dates.at(-1))}`
     );
     // Update data. Detected recentDate < today
-    js = await updatePosData(aumResults.dates.at(-1), today);
+    // Holdings_date to completely separate AUM functionality from holdings
+    js = await updatePosData(aumResults.holdings_date, today);
     aumResults = await updateAUM2();
   }
 
@@ -600,10 +601,12 @@ app.post("/addPos", function (req, res) {
       var adjClose = [];
       var dates = [];
 
-      for (var i = 0; i < data.length; i++) {
-        if (data[i].adjClose != null) {
-          adjClose.push(data[i].adjClose);
-          dates.push(JSON.stringify(data[i].date).slice(1, 11));
+      const tickerData = data[ticker]
+  
+      for (var i = 0; i < tickerData.length; i++) {
+        if (tickerData[i].adjClose != null) {
+          adjClose.push(tickerData[i].adjClose);
+          dates.push(JSON.stringify(tickerData[i].date).slice(1, 11));
         }
       }
 
@@ -650,7 +653,7 @@ app.post("/addPos", function (req, res) {
 
       var card = {
         status: "Success!",
-        message: `Successfully added ${ticker} to portfolio.\n\n**DEBUG PARAMETERS**\n${startDate}. \nDATA SIZE: ${data.length}.\nDATES SIZE: ${dates.length}`,
+        message: `Successfully added ${ticker} to portfolio.\n\n**DEBUG PARAMETERS**\n${startDate}. \nDATA SIZE: ${adjClose.length}.\nDATES SIZE: ${dates.length}`,
         buttons: [
           {
             text: "Go to Dashboard",
@@ -897,11 +900,73 @@ app.get("/testPolygon", async function (req, res) {
   res.send(data);
 });
 
+app.get("/hardResetHoldings", async function (req,res) {
+  // You should never need to use this unless holdings updates really fucks up (which it did bc it was dependent on aum date)
+  //const startDate = "2022-10-15"
+  const today = new Date().toJSON().slice(0, 10);
+  try {
+    const holding_documents = await Equity.find();
+
+    var tickerData;
+
+    for (const doc of holding_documents) {
+      console.log(doc.startDate)
+      var data = await polygon_historical([doc.ticker], doc.startDate, today).then((res)=> {
+        return JSON.parse(res);
+      })
+      tickerData = data[doc.ticker] 
+
+      var adjClose = []
+      var dates = []
+
+      for (var i = 0; i < tickerData.length; i++) {
+        if (tickerData[i].adjClose != null) {
+          adjClose.push(Number(tickerData[i].adjClose));
+          dates.push(JSON.stringify(tickerData[i].date).slice(1, 11));
+        }
+      }
+
+      doc.dates = dates;
+      doc.data = adjClose;
+
+      await doc.save();
+    }
+  } catch (err) {
+    console.error("FAILED: ", err)
+  }
+
+  await setHoldingsDate(today);
+
+  res.send(`UPDATE SUCCESS :)`)
+})
+
+async function setHoldingsDate(date) {
+  try {
+    // Find the first document (and only one)
+    const doc = await Equity.findOne();
+
+    if (!doc) {
+        console.error('FETCH EQUITY FAILED');
+    } else {
+        console.log('Document found:', doc);
+        if (doc.holdings_date != date)
+        {
+          doc.holdings_date = date
+          await doc.save();
+          console.log('Holdings date updated:', doc);
+        }
+    }
+
+  } catch (error) {
+      console.error('Error retrieving document:', error);
+  }
+}
+
 
 app.get("/testPolygon/:ticker&:startDate", async function (req, res) {
   // test route for ensuring polygon api call is correct
 
-  const {ticker, startDate, startPrice, shares, asset} = req.params;
+  const {ticker, startDate} = req.params;
 
   console.log("GET POLYGON 1");
   const today = new Date().toJSON().slice(0, 10);
@@ -916,10 +981,14 @@ app.get("/testPolygon/:ticker&:startDate", async function (req, res) {
   var adjClose = [];
   var dates = [];
 
-  for (var i = 0; i < data.length; i++) {
-    if (data[i].adjClose != null) {
-      adjClose.push(data[i].adjClose);
-      dates.push(JSON.stringify(data[i].date).slice(1, 11));
+  
+  const tickerData = data[ticker]
+  console.log("WE HAVE DATA", tickerData)
+
+  for (var i = 0; i < tickerData.length; i++) {
+    if (tickerData[i].adjClose != null) {
+      adjClose.push(tickerData[i].adjClose);
+      dates.push(JSON.stringify(tickerData[i].date).slice(1, 11));
     }
   }
 
@@ -933,13 +1002,16 @@ app.get("/testPolygon/:ticker&:startDate", async function (req, res) {
     startDate: startDate,
     data: adjClose,
     dates: dates,
+    today: today
   };
   console.log("GET POLYGON");
 
 
   res.send({
     formatted: newData,
-    raw: data
+    raw: data,
+    endDate: startDate,
+    dataLength: data.length
   });
 });
 
