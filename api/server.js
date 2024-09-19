@@ -650,7 +650,7 @@ app.post("/addPos", function (req, res) {
 
       var card = {
         status: "Success!",
-        message: `Successfully added ${ticker} to portfolio`,
+        message: `Successfully added ${ticker} to portfolio.\n\n**DEBUG PARAMETERS**\n${startDate}. \nDATA SIZE: ${data.length}.\nDATES SIZE: ${dates.length}`,
         buttons: [
           {
             text: "Go to Dashboard",
