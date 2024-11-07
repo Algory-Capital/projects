@@ -469,7 +469,7 @@ async function updateAUMCash() {
     }
   }
 
-  console.log("finished cash update")
+  console.log("finished cash update. New cash: ", newCash)
   return newCash;
 }
 
@@ -573,7 +573,7 @@ app.get("/addPos", function (req, res) {
 app.post("/addPos", function (req, res) {
   const ticker = req.body.ticker.toUpperCase();
   const startDate = req.body.startdate;
-  const startPrice = req.body.startprice;
+  // const startPrice = req.body.startprice;
   const shares = req.body.shares;
   const assetClass = req.body.assetclass.toUpperCase();
   const today = new Date().toJSON().slice(0, 10);
@@ -638,6 +638,18 @@ app.post("/addPos", function (req, res) {
       console.log("DATES: ", dates);
 
       console.log("LEN: ", data.length);
+
+      var startPrice = "null";
+
+      for (i = 0; i < dates.length; i++)
+      {
+        if (adjClose[i] != null)
+        {
+          // assign to first non-null close
+          startPrice = adjClose[i];
+          break;
+        }
+      }
 
       var newPosition = new Equity({
         ticker: ticker,

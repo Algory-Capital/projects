@@ -61,9 +61,9 @@ on our Wix site ***-->
               <div class="header">Equities</div>
             </div>
             <div id="sparksEquities" class="row sparkboxes mb-4"></div>
-            <div class="box boxHeader">
+            <!-- <div class="box boxHeader">
               <div class="header">Fixed Income</div>
-            </div>
+            </div> -->
             <div id="sparksFI" class="row sparkboxes mb-4"></div>
             <div class="row mb-4">
               <div class="col-md-12">
@@ -235,6 +235,67 @@ on our Wix site ***-->
 
             // the default colorPalette for this dashboard
             var colorPalette = ['#82ffd0', '#44e7cf', '#00cfcd', '#00b6c9', '#009dc2', '#0084b8', '#006ba9', '#005296', '#00397e', '#042063'];
+            
+            // color palette helper functions for when we exceed # of available colors
+            function generateColorPalette(baseColors, numColors) {
+              if (numColors < baseColors.length)
+                return baseColors;
+
+              let palette = [...baseColors];
+              let numToGenerate = numColors - baseColors.length;
+
+              // Get colors in HSL and interpolate
+              const hslColors = baseColors.map(hexToHSL);
+              for (let i = 0; i < numToGenerate; i++) {
+                  const prevColor = hslColors[i % hslColors.length];
+                  const nextColor = hslColors[(i + 1) % hslColors.length];
+
+                  // Interpolate between this color and the next
+                  const interpolatedHSL = {
+                      h: prevColor.h + ((nextColor.h - prevColor.h) / (numToGenerate + 1)) * (i + 1),
+                      s: prevColor.s,
+                      l: prevColor.l,
+                  };
+                  palette.push(hslToHex(interpolatedHSL));
+              }
+              return palette;
+            }
+
+            function hexToHSL(hex) {
+              // Convert hex to RGB
+              let r = parseInt(hex.substring(1, 3), 16) / 255;
+              let g = parseInt(hex.substring(3, 5), 16) / 255;
+              let b = parseInt(hex.substring(5, 7), 16) / 255;
+
+              // Convert RGB to HSL
+              let max = Math.max(r, g, b), min = Math.min(r, g, b);
+              let h, s, l = (max + min) / 2;
+
+              if (max === min) {
+                  h = s = 0; // achromatic
+              } else {
+                  let d = max - min;
+                  s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                  switch (max) {
+                      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                      case g: h = (b - r) / d + 2; break;
+                      case b: h = (r - g) / d + 4; break;
+                  }
+                  h /= 6;
+              }
+              return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+            }
+
+            function hslToHex({ h, s, l }) {
+              l /= 100;
+              const a = s * Math.min(l, 1 - l) / 100;
+              const f = n => {
+                  const k = (n + h / 30) % 12;
+                  const color = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+                  return Math.round(255 * color).toString(16).padStart(2, '0');   
+              };
+              return `#${f(0)}${f(8)}${f(4)}`;
+            }
 
             // Hardcoded jquery sizes for spark sharts
             var boxPos = [[12], [6, 6], [6, 6, 12], [6, 6, 6, 6], [6, 6, 6, 6, 12], [6, 6, 6, 6, 6, 6], [6, 6, 6, 6, 6, 6, 12], [6, 6, 6, 6, 6, 6, 6, 6]];
@@ -584,6 +645,7 @@ on our Wix site ***-->
 
             // moving on to AUM
             // assetWorth.push(Number.parseFloat((aum.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2)));
+            // TODO: check if concerning, or fault of api code
             assetWorth.push(output["AUM"].cash);
             tickers.push("Cash");
 
@@ -742,6 +804,9 @@ on our Wix site ***-->
             aumChart.render();
 
             // moving on to donut chart
+            /*
+            Donut chart colors will break if it contains a slice of 0. If colors break, check if one of the shares = 0 (it shouldn't)
+            */
 
             var donutOpt = {
               chart: {
@@ -796,7 +861,7 @@ on our Wix site ***-->
                   colors: undefined
                 }
               },
-              colors: colorPalette.slice(colorPalette.length - tickers.length),
+              colors: colorPalette.length >= tickers.length ? colorPalette.slice(colorPalette.length - tickers.length) : generateColorPalette(colorPalette, tickers.length),
               title: {
                 text: 'Portfolio Holdings',
                 style: {
