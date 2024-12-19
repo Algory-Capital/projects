@@ -242,6 +242,8 @@ async function getPosData(sheets = true) {
     let tickerSet = new Set(tickers)
     let sheetsData = await sheetsModule.getHoldingsSheets();
 
+    console.log("Sheets data: ", sheetsData)
+
     let to_push = [];
 
     async function included(equity_obj) {

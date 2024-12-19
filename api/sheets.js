@@ -88,7 +88,7 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
         return output;
       };
     
-      getSheetData({
+      const ret = await getSheetData({
         // sheetID you can find in the URL of your spreadsheet after "spreadsheet/d/"
         sheetID: sheetID,
         // sheetName is the name of the TAB in your spreadsheet (default is "Sheet1")
@@ -97,8 +97,15 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
         callback: equityDataHandler,
       //   first_cell: "E2",
       //   last_cell: "L20"
+      }).then((output) => {
+        console.log("Output from getHoldingsSheets: ", output)
+        return output
+      }).catch((err) => {
+        console.error(err)
+        return []
       });
 
+      return ret
   }
 
   function getSummarySheets()
