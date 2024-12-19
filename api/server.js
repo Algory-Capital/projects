@@ -12,7 +12,7 @@ require("dotenv").config();
 // but this is a low priority of mine
 
 // include local files
-require("./sheets")
+const sheetsModule = require("./sheets")
 
 const { restClient } = require("@polygon.io/client-js");
 
@@ -240,7 +240,7 @@ async function getPosData(sheets = true) {
     // set union with Google sheets
     
     let tickerSet = new Set(tickers)
-    let sheetsData = await getHoldingsSheets();
+    let sheetsData = await sheetsModule.getHoldingsSheets();
 
     let to_push = [];
 

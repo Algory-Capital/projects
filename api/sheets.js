@@ -153,3 +153,7 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
     console.error("stringBeforeChar failed: ", str, char);
     return str;
   }
+
+  module.exports = {
+    getHoldingsSheets,
+  };
