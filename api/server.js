@@ -7,6 +7,13 @@ const fetch = require("node-fetch");
 // const yfin2 = require("yahoo-finance2");
 require("dotenv").config();
 
+
+// import functions, need to add modularity to code + refactor
+// but this is a low priority of mine
+
+// include local files
+require("./sheets")
+
 const { restClient } = require("@polygon.io/client-js");
 
 var path = require("path");
@@ -27,7 +34,8 @@ mongoose.connect(
   "mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algoryPortDB"
 );
 
-// if debugMode = true, do not push to db
+
+// if debugMode = true, do not push to db. IK this is spaghetti
 const debugMode = false;
 
 const divSchema = {
@@ -210,9 +218,10 @@ async function getDivUpdate(ticker, value, spy) {
 }
 
 // Simple query to db for stored positions
-async function getPosData() {
+async function getPosData(sheets = true) {
   let tickers = [];
   js = {};
+  
 
   const equityResults = await Equity.find({}).catch((err) => {
     console.error(
@@ -224,6 +233,80 @@ async function getPosData() {
     tickers.push(equity.ticker);
     js[equity.ticker] = equity;
   });
+
+
+  if (sheets)
+  {
+    // set union with Google sheets
+    
+    let tickerSet = new Set(tickers)
+    let sheetsData = await getHoldingsSheets();
+
+    let to_push = [];
+
+    async function included(equity_obj) {
+      const tkr = equity_obj['ticker']
+      if (tickerSet.has(tkr))
+        return true; // included
+      
+      // need to push
+      to_push.push(equity_obj)
+      return false; // need to push equity, not currently in mongodb
+    };
+
+    // pushing promises into array would be better performance but doesn't matter
+    const incl_promises = sheetsData.map(async (eq_obj) => {
+      return await included(eq_obj)
+    })
+
+    await Promise.all(incl_promises)
+    
+    async function push_mongo(eq_obj) {
+      // call addPos route with eq_obj to update MongoDB
+
+      /*
+      const ticker = req.body.ticker.toUpperCase();
+      const startDate = req.body.startdate;
+      // const startPrice = req.body.startprice;
+      const shares = req.body.shares;
+      const assetClass = req.body.assetclass.toUpperCase();
+      */
+      fetch(('addPos', {
+        body: JSON.stringify({
+          eq_obj
+        })
+      }).then(() => {
+        return true;
+      }).catch((err) => {
+        console.error("FAILED PUSH TO MONGO (getPosData -> push_mongo): ", eq_obj)
+        console.error("ABOVE ERROR::",err)
+        return false;
+      }))
+    }
+
+    // push to_push to mongodb i.e. buy stock/addPos
+    const mongo_push_promises = to_push.map(async (eq_obj) => {
+      return await push_mongo(eq_obj)
+    })
+    
+    await Promise.all(mongo_push_promises).then((values) => {
+      if (values.every(Boolean)) // all true
+      {
+        tickers = [];
+        js = {};
+
+        equityResults.forEach((equity) => {
+          tickers.push(equity.ticker);
+          js[equity.ticker] = equity;
+        });
+      }
+      else {
+        console.error("Not pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
+      }
+    }).catch((err) => {
+      console.error("Error while pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
+    })
+  }
 
   return { tickers, js };
 }
@@ -304,6 +387,12 @@ async function updateAUM2(excludeStartDate = true) {
   const newData = await AUMData.find({});
 
   return newData[0];
+}
+
+async function getAUMSheets()
+{
+  // get aum from google sheets data
+
 }
 
 async function resetAUM() {
