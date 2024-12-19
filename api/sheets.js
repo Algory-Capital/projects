@@ -1,3 +1,5 @@
+const fetch = require("node-fetch");
+
 const sheetID = "1JOmzegYf0kGxDcjej0Fx_RCuFVoaOxobEnDsptjTJA8"
 const sheetName = encodeURIComponent("Fund Dashboard")
 
