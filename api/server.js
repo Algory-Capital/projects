@@ -13,6 +13,7 @@ require("dotenv").config();
 
 // include local files
 const sheetsModule = require("./sheets")
+// const polygonAPIWrapper = require("./polygon")
 
 const { restClient } = require("@polygon.io/client-js");
 
@@ -89,13 +90,6 @@ function unix_to_date(unix_ts) {
   return year + "-" + month + "-" + day;
 }
 
-function build_polygon_URL(ticker, start_date, end_date) {
-  // GET request to Polygon Stocks Aggregate Bars
-  // date format: YYYY-MM-DD
-  let tkr = ticker.toUpperCase().replace("-", ".");
-  return `https://api.polygon.io/v2/aggs/ticker/${tkr}/range/1/day/${start_date}/${end_date}?adjusted=true&sort=asc&apiKey=${POLY_API_KEY}`;
-}
-
 async function polygon_historical(tickers, start_date, end_date) {
 
   return new Promise((resolve, reject) => {
@@ -158,65 +152,6 @@ async function polygon_historical(tickers, start_date, end_date) {
   });
 }
 
-// USELESS? We just need a getter + json parsing for polygon data
-// async function updatePolygonPosData() {
-//   /*
-//    * Updates Polygon Position Data via Polygon API
-//    * To be called when SPY.dates.at(-1) is not latest date (needs updating)
-//    */
-//   let tickers = [];
-//   js = {};
-//   // iterate documents
-//   for await (const doc of Equity.find({}, (err, equities) => {
-//     if (err) console.error("Error occurred in getPolygonPosData", err);
-//   })) {
-//     equities.map((equity) => {
-//       tickers.push(equity.ticker);
-//       js[equity.ticker] = equity;
-//     });
-//   }
-
-//   return { tickers, js };
-// }
-
-// DIVIDEND IMPLEMENTATION FROM POLYGON. Limited 5 queries per minute
-// TODO: rewrite?
-async function getDivUpdate(ticker, value, spy) {
-  // target ex_dividend_date
-  var addToAUM = 0;
-  fetch(fetchURL + ticker)
-    .then((result) => result.json())
-    .then(async (output) => {
-      if (output.results != undefined && output.results.length > 0) {
-        for (const divEntry of output.results) {
-          if (divEntry.ex_dividend_date > spy.dates.at(-1)) {
-            continue;
-          } else if (divEntry.ex_dividend_date == value.divInfo.lastUpdate) {
-            break;
-          } else if (value.divInfo.lastUpdate < divEntry.ex_dividend_date) {
-            // calculate div payout
-            addToAUM += divEntry.cash_amount * value.shares;
-            // set divInfo to this ex_dividend_date
-            const doc = await Equity.findOneAndUpdate(
-              { ticker: ticker },
-              {
-                divInfo: {
-                  lastUpdate: divEntry.ex_dividend_date,
-                  payoutRatio: divEntry.cash_amount,
-                  payout: addToAUM,
-                  frequency: divEntry.frequency,
-                },
-              }
-            );
-
-            break;
-          }
-        }
-      }
-      return addToAUM;
-    });
-}
-
 // Simple query to db for stored positions
 async function getPosData(sheets = true) {
   let tickers = [];
@@ -238,6 +173,8 @@ async function getPosData(sheets = true) {
   if (sheets)
   {
     // set union with Google sheets
+
+    // TODO: make this a set intersection because we need to account for sellPos
     
     let tickerSet = new Set(tickers)
     let sheetsData = await sheetsModule.getHoldingsSheets();
@@ -1186,6 +1123,12 @@ app.get("/testAUMRESET", async function (req, res) {
 
   res.send(resJSON);
 });
+
+app.get("/getSheetsHoldingsPos", async function (req, res) {
+  let sheetsData = await sheetsModule.getHoldingsSheets();
+  res.send(sheetsData)
+})
+
 
 let port = process.env.PORT;
 if (port == null || port == "") {

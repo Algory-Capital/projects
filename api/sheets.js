@@ -14,12 +14,23 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
     const base = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?`;
     const url = `${base}&sheet=${encodeURIComponent(sheetName)}&tq=${encodeURIComponent(query)}`;
   
-    await fetch(url)
+    const ret = await fetch(url)
       .then((res) => res.text())
       .then((response) => {
         // return value post-callback
-        return callback(responseToObjects(response));
+        const ret = callback(responseToObjects(response));
+
+        console.log("RET: ", ret)
+        return ret;
+      })
+      .catch((err) => {
+        console.error("Error fetching sheet data:", err);
+        throw err;
       });
+    
+    return ret; // return post callback
+
+    // helper function below (data parse into array)
   
     function responseToObjects(res) {
       const jsData = JSON.parse(res.substring(47).slice(0, -2));
@@ -61,7 +72,7 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
     // get holdings
     // callback
     const equityDataHandler = (sheetData) => {   
-        console.log("sheet data (passed to equityDataHandler): ", sheetData);
+        // console.log("sheet data (passed to equityDataHandler): ", sheetData);
         //Reformat objects to push to mongodb
 
         var output = []
@@ -70,11 +81,13 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
         {
             let obj = sheetData[i];
 
+            // console.log("sheet data object: ", obj)
+
             let obj_reformat = {
-                "ticker": sheetData["$Ticker "].toUpperCase(),
-                "startDate": stringBeforeChar(sheetData["Entry Date"], "T"), // alt hardcode idx but this is cleaner
-                "entryPrice": sheetData["Avg Cost"],
-                "shares": sheetData["# of Shares"],
+                "ticker": obj["$Ticker "].toUpperCase(),
+                "startDate": stringBeforeChar(obj["Entry Date"], "T"), // alt hardcode idx but this is cleaner
+                "entryPrice": obj["Avg Cost"],
+                "shares": obj["# of Shares"],
                 "assetClass": "E",
                 // data:,
                 // dates:,
@@ -97,14 +110,12 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
         callback: equityDataHandler,
       //   first_cell: "E2",
       //   last_cell: "L20"
-      }).then((output) => {
-        console.log("Output from getHoldingsSheets: ", output)
-        return output
       }).catch((err) => {
         console.error(err)
         return []
       });
-
+      
+      console.log("Output from getHoldingsSheets: ", ret)
       return ret
   }
 
@@ -152,6 +163,8 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
   // general util
   function stringBeforeChar(str, char)
   {
+    str = str.toString(); // js things
+    // console.log("str: ", str);
     const index = str.indexOf(char);
     
     if (index !== -1) {
