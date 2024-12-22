@@ -22,6 +22,7 @@ const { start } = require("repl");
 
 const app = express();
 app.use(cors());
+app.use(express.json())
 
 app.engine("pug", require("pug").__express);
 
@@ -34,7 +35,6 @@ app.use("/assets", express.static(__dirname + "/dashboard/assets/"));
 mongoose.connect(
   "mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algoryPortDB"
 );
-
 
 // if debugMode = true, do not push to db. IK this is spaghetti
 const debugMode = false;
@@ -74,7 +74,8 @@ const fetchURL =
 
 const rest = restClient(apikey);
 
-var startDates = [];
+// convert startDates into map
+var startDates = new Map();
 
 function unix_to_date(unix_ts) {
   // convert unix to our date format
@@ -95,19 +96,23 @@ async function polygon_historical(tickers, start_date, end_date) {
   return new Promise((resolve, reject) => {
     let res = {};
     const promises = []; // Array to store promises from API calls
-    console.log("TICKERS: ", tickers)
+    console.log("POLYGON PARAMS: ", tickers, start_date, end_date)
 
     try {
       tickers.forEach((ticker, idx) => {
+        if (start_date === null)
+          start_date = startDates.get(ticker)
+
         try {
+          console.log("TRYING FOR TICKER: ", ticker.toUpperCase().replace("-", "."), "start_date: ", start_date)
           // replace for BRK-B edge case
           const promise = rest.stocks
             .aggregates(
               ticker.toUpperCase().replace("-", "."),
               1,
               "day",
-              start_date,
-              end_date
+              start_date.toString(),
+              end_date.toString()
             )
             .then((data) => {
               res[ticker] = [];
@@ -119,7 +124,7 @@ async function polygon_historical(tickers, start_date, end_date) {
               data.results.forEach((arg) => {
                 let ts = unix_to_date(arg.t);
   
-                if (compareTimes(ts, startDates[idx]) <= 0) {
+                if (compareTimes(ts, startDates.get(ticker)) <= 0) {
                   res[ticker].push({ adjClose: null, date: null });
                 } else {
                   let tkrData = {
@@ -144,10 +149,13 @@ async function polygon_historical(tickers, start_date, end_date) {
 
     Promise.all(promises)
       .then(() => {
+        console.log("Sucessfully finished tickers: ", tickers)
         resolve(JSON.stringify(res));
       })
       .catch((error) => {
-        throw error;
+        console.error("ERROR ENCOUNTERED IN POLYGON CLIENT FOR TICKERS: ", tickers, error.message)
+        // throw error;
+        reject(error);
       });
   });
 }
@@ -156,8 +164,9 @@ async function polygon_historical(tickers, start_date, end_date) {
 async function getPosData(sheets = true) {
   let tickers = [];
   js = {};
-  
 
+  // todo: clean this shit up, update selling via set intersect
+  
   const equityResults = await Equity.find({}).catch((err) => {
     console.error(
       "Error occurred in getPosData with fetching Equity Collection: ",
@@ -179,7 +188,7 @@ async function getPosData(sheets = true) {
     let tickerSet = new Set(tickers)
     let sheetsData = await sheetsModule.getHoldingsSheets();
 
-    console.log("Sheets data: ", sheetsData)
+    // console.log("Sheets data: ", sheetsData)
 
     let to_push = [];
 
@@ -189,7 +198,8 @@ async function getPosData(sheets = true) {
         return true; // included
       
       // need to push
-      to_push.push(equity_obj)
+      to_push.push(equity_obj);
+      tickerSet.add(tkr);
       return false; // need to push equity, not currently in mongodb
     };
 
@@ -210,41 +220,70 @@ async function getPosData(sheets = true) {
       const shares = req.body.shares;
       const assetClass = req.body.assetclass.toUpperCase();
       */
-      fetch(('addPos', {
-        body: JSON.stringify({
-          eq_obj
-        })
+      console.log("EQUITY OBJECT IN MONGO: ", eq_obj)
+      // https://algoryapi.herokuapp.com/addPos
+      // http://localhost:3000/addPos
+      fetch('https://algoryapi.herokuapp.com/addPos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eq_obj)
       }).then(() => {
+        // console.log("PUSH FROM SHEETS SUCESS::BOUGHT STOCK::",eq_obj)
         return true;
       }).catch((err) => {
         console.error("FAILED PUSH TO MONGO (getPosData -> push_mongo): ", eq_obj)
         console.error("ABOVE ERROR::",err)
         return false;
-      }))
+      })
     }
 
     // push to_push to mongodb i.e. buy stock/addPos
-    const mongo_push_promises = to_push.map(async (eq_obj) => {
-      return await push_mongo(eq_obj)
-    })
-    
-    await Promise.all(mongo_push_promises).then((values) => {
-      if (values.every(Boolean)) // all true
-      {
-        tickers = [];
-        js = {};
+    // const mongo_push_promises = to_push.map(async (eq_obj) => {
+    //   return await push_mongo(eq_obj)
+    // })
 
-        equityResults.forEach((equity) => {
-          tickers.push(equity.ticker);
-          js[equity.ticker] = equity;
-        });
-      }
-      else {
-        console.error("Not pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
-      }
-    }).catch((err) => {
-      console.error("Error while pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
-    })
+    // slower but safer bc saves progress
+    for (const eq_obj of to_push)
+    {
+      await push_mongo(eq_obj);
+      console.log("obj should be pushed: ", eq_obj.ticker)
+    }
+      
+    
+    // await Promise.all(mongo_push_promises).then((values) => {
+    //   if (values.every(Boolean)) // all true
+    //   {
+    //     tickers = [];
+    //     js = {};
+
+    //     equityResults.forEach((equity) => {
+    //       tickers.push(equity.ticker);
+    //       js[equity.ticker] = equity;
+    //     });
+    //   }
+    //   else {
+    //     console.error("Not pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
+    //   }
+
+    //   tickers = [];
+    //     js = {};
+
+    //     equityResults.forEach((equity) => {
+    //       tickers.push(equity.ticker);
+    //       js[equity.ticker] = equity;
+    //     });
+    // }).catch((err) => {
+    //   console.error("Error while pushing new positions from sheets (push_mongo promise(s) failed): ", to_push)
+    // })
+    tickers = [];
+    js = {};
+
+    equityResults.forEach((equity) => {
+      tickers.push(equity.ticker);
+      js[equity.ticker] = equity;
+    });
   }
 
   return { tickers, js };
@@ -328,25 +367,6 @@ async function updateAUM2(excludeStartDate = true) {
   return newData[0];
 }
 
-async function getAUMSheets()
-{
-  // get aum from google sheets data
-
-}
-
-async function resetAUM() {
-  // writing this function bc I screwed up the db
-  // can be used to replace updateAUM2 when retroactively place orders
-
-  cash = 100000;
-  startDate = "2022-10-05";
-
-  var { tickers, js } = getPosData();
-
-  for (var [ticker, data] of Object.entries(js)) {
-  }
-}
-
 function compareTimes(t1, t2) {
   /*
    * -1: t1 < t2
@@ -362,17 +382,8 @@ function compareTimes(t1, t2) {
 
 // Updating the position data and dates within the db
 async function updatePosData(startDate, endDate) {
-  // TODO: Fix. Replace YFin with Polygon
   var { tickers, js } = await getPosData();
   tickers.push("SPY");
-
-  // CHANGE YFIN.HISTORICAL, AND DATE TARGETING
-  // const data = await yfin.historical({
-  //   symbols: tickers,
-  //   from: startDate,
-  //   to: endDate,
-  //   period: "d",
-  // });
 
   const data = await polygon_historical(tickers, startDate, endDate).then(
     (res) => {
@@ -503,14 +514,29 @@ async function updateAUMCash() {
 
 // Finds the earliest date given an array of dates
 function findEarliestDate(dates) {
-  if (dates.length == 0) return null;
-  var earliestDate = dates[0];
-  for (var i = 1; i < dates.length; i++) {
-    var currentDate = dates[i];
-    if (currentDate < earliestDate) {
-      earliestDate = currentDate;
-    }
+  // if (dates.length == 0) return null;
+  // var earliestDate = dates[0];
+  // for (var i = 1; i < dates.length; i++) {
+  //   var currentDate = dates[i];
+  //   if (currentDate < earliestDate) {
+  //     earliestDate = currentDate;
+  //   }
+  // }
+
+  let earliestDate = null;
+
+  // dates is a map
+  for (const [tkr,v] of dates) 
+  {
+    if (earliestDate === null || v < earliestDate)
+        earliestDate = v;
   }
+
+  console.log("START DATES", dates.values(), earliestDate);
+
+  if (earliestDate === null)
+    throw new Error("Unable to find earliest Date in object: ", dates);
+
   return earliestDate;
 }
 
@@ -534,7 +560,8 @@ app.get("/getData", async function (req, res) {
   const today = date.getUTCHours() >= 21 ? date.toJSON().slice(0, 10) : new Date(date.getTime() - 86400000).toJSON().slice(0,10);
 
   Object.values(js).forEach((val) => {
-    startDates.push(val.startDate);
+    // startDates.push(val.startDate);
+    startDates.set(val.ticker, val.startDate);
   });
 
   var oldestDate = findEarliestDate(startDates);
@@ -599,13 +626,18 @@ app.get("/addPos", function (req, res) {
 
 // Post route to saving the position into the portfolio
 app.post("/addPos", function (req, res) {
-  const ticker = req.body.ticker.toUpperCase();
+  console.log("REQUESTED TO ADD POS: ", req.body)
+  console.log("Ticker: ", req.body.ticker)
+
+  const ticker = req.body.ticker.toString().toUpperCase();
   const startDate = req.body.startdate;
   // const startPrice = req.body.startprice;
   const shares = req.body.shares;
-  const assetClass = req.body.assetclass.toUpperCase();
+  const assetClass = req.body.assetclass.toString().toUpperCase();
   const today = new Date().toJSON().slice(0, 10);
   var dividend;
+
+  console.log("Successfully deconstructed req: ", ticker)
 
   Equity.findOne({ ticker: ticker }).then(async function (foundList, err) {
     if (err) {
@@ -623,9 +655,13 @@ app.post("/addPos", function (req, res) {
       // create entirely new position
       const data = await polygon_historical([ticker], startDate, today).then(
         (res) => {
+          console.log("SUCCESS FOR polygon in ticker: ", ticker)
           return JSON.parse(res);
         }
-      );
+      ).catch((err) => {
+        console.error("Error occured in /addPos")
+        throw new Error("smth wrong in polygon req (maybe rate-limit)")
+      });
 
       var adjClose = [];
       var dates = [];
@@ -774,7 +810,7 @@ app.get("/sellPos", function (req, res) {
 
 // Post route to saving the position into the portfolio
 app.post("/sellPos", function (req, res) {
-  const ticker = req.body.ticker.toUpperCase();
+  const ticker = req.body.ticker.toString().toUpperCase();
   const startDate = req.body.startdate;
   const sellPrice = req.body.sellprice;
   const shares = req.body.shares;
@@ -928,8 +964,8 @@ app.get("/delete/:ticker", function (req, res) {
 app.get("/testPolygon", async function (req, res) {
   // test route for ensuring polygon api call is correct
   console.log("GET POLYGON 1");
-  let tkrs = ["FSLR"];
-  const data = await polygon_historical(tkrs, "2022-12-05", "2024-05-20");
+  let tkrs = ["SNOW"];
+  const data = await polygon_historical(tkrs, "2024-11-01", "2024-12-22");
   // .then(
   //   (res) => {
   //     return JSON.parse(res);

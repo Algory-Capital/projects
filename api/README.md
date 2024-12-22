@@ -34,11 +34,17 @@ Check out live dashboard at https://algorycapital.com/performance
 
 - /testAUM2
 - /testPolygon
+- /getSheetsHoldingsPos
 
 ### JSON formatting
 
 - Ticker
   - Array with JSON (keys: date, adjClose)
+
+### Current TODO (contact me if you have smth that needs to be fixed and isn't on here)
+- Selling (partial + whole), based on Sheets
+- General refactor, modularization, error handling + logging (extremely low-priority, I'm prioritizing my other work/projects I've neglected)
+- AUM update based on sheets (including cash) -> modify AUM2
 
 ## Backups
 

@@ -73,7 +73,8 @@ function unix_to_date(unix_ts) {
     
                 data.results.forEach((arg) => {
                   let ts = unix_to_date(arg.t);
-    
+                  
+                  // issue here
                   if (compareTimes(ts, startDates[idx]) <= 0) {
                     res[ticker].push({ adjClose: null, date: null });
                   } else {
@@ -146,7 +147,7 @@ async function getDivUpdate(ticker, value, spy) {
     });
   }
   
-  module.exports = {
-    build_polygon_URL,
-    polygon_historical
-  }
+  // module.exports = {
+  //   build_polygon_URL,
+  //   polygon_historical
+  // }

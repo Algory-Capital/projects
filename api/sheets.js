@@ -8,6 +8,26 @@ Fair warning
 - this is very sensitive to human error, I will add better error handling/flow later but low priority
 */
 
+function date_reformat(raw_date) {
+  // converts date string from sheets to sheets into YYYY-MM-DD
+  // Ex: 'Mon Dec 09 2024 00:00:00 GM'
+
+  function pad_two(data) {
+    return data.toString().padStart(2, "0")
+  }
+
+  const date = new Date(raw_date)
+
+  console.log(raw_date.toString(), date, stringBeforeChar(raw_date))
+
+  const mm = pad_two(date.getMonth() + 1); // plus 1 bc 0-indexed
+  const dd = pad_two(date.getDay());
+  const yyyy = pad_two(date.getFullYear());
+
+  const ret = `${yyyy}-${mm}-${dd}`
+  console.log("RET: ", ret)
+  return ret;
+}
 
 // https://github.com/theotrain/load-google-sheet-data-using-sql/blob/main/getSheetData.js
 const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = null, last_cell = null }) => {
@@ -82,13 +102,14 @@ const getSheetData = async ({ sheetID, sheetName, query, callback, first_cell = 
             let obj = sheetData[i];
 
             // console.log("sheet data object: ", obj)
-
+            
+            // WEAK POINT: cleaned up object (hard-coded so vulnerable)
             let obj_reformat = {
                 "ticker": obj["$Ticker "].toUpperCase(),
-                "startDate": stringBeforeChar(obj["Entry Date"], "T"), // alt hardcode idx but this is cleaner
+                "startdate": date_reformat(obj["Entry Date"], "T"), // alt hardcode idx but this is cleaner
                 "entryPrice": obj["Avg Cost"],
                 "shares": obj["# of Shares"],
-                "assetClass": "E",
+                "assetclass": "E",
                 // data:,
                 // dates:,
             }
