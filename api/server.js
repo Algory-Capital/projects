@@ -165,19 +165,7 @@ async function getPosData(sheets = true) {
   let tickers = [];
   js = {};
 
-  // todo: clean this shit up, update selling via set intersect
-  
-  const equityResults = await Equity.find({}).catch((err) => {
-    console.error(
-      "Error occurred in getPosData with fetching Equity Collection: ",
-      err
-    );
-  });
-  equityResults.forEach((equity) => {
-    tickers.push(equity.ticker);
-    js[equity.ticker] = equity;
-  });
-
+  // todo: clean this shit up, this does not fail gracefully either
 
   if (sheets)
   {
@@ -250,6 +238,27 @@ async function getPosData(sheets = true) {
       await push_mongo(eq_obj);
       console.log("obj should be pushed: ", eq_obj.ticker)
     }
+    
+
+    // pushed all equity objects, now update attributes
+    // I know this is very inefficient but above code was already written (although prob completely unnecessary)
+
+    const updateCollectionPromises = sheetsData.map((eq_obj) => {
+      setHoldingMongo(eq_obj["ticker"], eq_obj["shares"], eq_obj["entryPrice"]);
+    })
+
+    await Promise.all(updateCollectionPromises);
+
+    const equityResults = await Equity.find({}).catch((err) => {
+      console.error(
+        "Error occurred in getPosData with fetching Equity Collection: ",
+        err
+      );
+    });
+    equityResults.forEach((equity) => {
+      tickers.push(equity.ticker);
+      js[equity.ticker] = equity;
+    });
       
     
     // await Promise.all(mongo_push_promises).then((values) => {
@@ -287,6 +296,29 @@ async function getPosData(sheets = true) {
   }
 
   return { tickers, js };
+}
+
+async function setHoldingMongo(ticker, shares, avg_price) {
+  return new Promise(async (resolve, reject) => {
+      // risky point
+      const filter = { _ticker : ticker };
+
+      const updateDoc = {
+        $set: {
+          shares: shares,
+          entryPrice: avg_price
+        }
+      }
+
+      const result = await Equity.updateOne(filter, updateDoc)
+        .then((res) => resolve(res))
+        .catch((err) => {
+          console.error(`SETHOLDINGMONGO FAIUED::ticker: ${ticker}::${shares}::${avg_price}::${err}`)
+          reject(err)
+        });
+
+      resolve(result)
+  })
 }
 
 // VERSION 2 Updates the AUM until the last stored position data
