@@ -598,7 +598,7 @@ function findEarliestDate(dates) {
 
   console.log("START DATES", dates.values(), earliestDate, utils.isEmpty(dates));
 
-  if (isEmpty(dates)) {
+  if (utils.isEmpty(dates)) {
     return "2022-06-30";
   }
 
