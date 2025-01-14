@@ -597,7 +597,7 @@ function findEarliestDate(dates) {
 
   console.log("START DATES", dates.values(), earliestDate);
 
-  if (data.values().length === 0) {
+  if (dates.values().length === 0) {
     return "2022-06-30";
   }
 
@@ -1230,6 +1230,10 @@ app.get("/testAUMRESET", async function (req, res) {
 app.get("/getSheetsHoldingsPos", async function (req, res) {
   let sheetsData = await sheetsModule.getHoldingsSheets();
   res.send(sheetsData)
+})
+
+app.get("/getToDelete", async function (req, res) {
+  //todo
 })
 
 
