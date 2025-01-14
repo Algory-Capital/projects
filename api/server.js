@@ -597,6 +597,10 @@ function findEarliestDate(dates) {
 
   console.log("START DATES", dates.values(), earliestDate);
 
+  if (data.values().length === 0) {
+    return "2022-06-30";
+  }
+
   if (earliestDate === null)
     throw new Error("Unable to find earliest Date in object: ", dates);
 
