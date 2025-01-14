@@ -13,6 +13,7 @@ require("dotenv").config();
 
 // include local files
 const sheetsModule = require("./sheets")
+const utils = require("./utils")
 // const polygonAPIWrapper = require("./polygon")
 
 const { restClient } = require("@polygon.io/client-js");
@@ -595,9 +596,9 @@ function findEarliestDate(dates) {
         earliestDate = v;
   }
 
-  console.log("START DATES", dates.values(), earliestDate);
+  console.log("START DATES", dates.values(), earliestDate, utils.isEmpty(dates));
 
-  if (dates.values().length === 0) {
+  if (isEmpty(dates)) {
     return "2022-06-30";
   }
 
