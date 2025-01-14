@@ -198,7 +198,7 @@ async function getPosData(sheets = true) {
       }
     }
     
-    const EquityObjects = await Equity.find({}).toArray();
+    const EquityObjects = await Equity.find({});
     EquityObjects.forEach((mongo_obj) => {
       deletePromises.push(deleteNotFound(mongo_obj));
     })
