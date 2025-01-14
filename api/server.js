@@ -189,7 +189,7 @@ async function getPosData(sheets = true) {
     
         if (!hasTicker) {
           // Delete MongoDB object with ticker name
-          return await AUM.findOneAndDelete({ ticker: ticker });
+          return await Equity.findOneAndDelete({ ticker: ticker });
         }
         return null; // No action needed
       } catch (err) {
@@ -198,8 +198,8 @@ async function getPosData(sheets = true) {
       }
     }
     
-    const AUMObjects = await AUM.find({}).toArray();
-    AUMObjects.forEach((mongo_obj) => {
+    const EquityObjects = await Equity.find({}).toArray();
+    EquityObjects.forEach((mongo_obj) => {
       deletePromises.push(deleteNotFound(mongo_obj));
     })
 
