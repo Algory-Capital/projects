@@ -178,6 +178,37 @@ async function getPosData(sheets = true) {
 
     // console.log("Sheets data: ", sheetsData)
 
+    // DELETE collection objects that don't exist in sheetsData
+
+    let deletePromises = []
+
+    async function deleteNotFound(mongo_obj) {
+      try {
+        const ticker = mongo_obj.ticker;
+        const hasTicker = sheetsData.some(obj => obj.ticker === ticker);
+    
+        if (!hasTicker) {
+          // Delete MongoDB object with ticker name
+          return await AUM.findOneAndDelete({ ticker: ticker });
+        }
+        return null; // No action needed
+      } catch (err) {
+        console.error(`ERROR::DELETENOTFOUND::${err}`);
+        throw err; // Re-throw error for Promise.all
+      }
+    }
+    
+    const AUMObjects = await AUM.find({}).toArray();
+    AUMObjects.forEach((mongo_obj) => {
+      deletePromises.push(deleteNotFound(mongo_obj));
+    })
+
+    await Promise.all(deletePromises).catch((err) => {
+      console.error("FAILED DELETE FUNCTION IN GETPOSDATA")
+    });
+
+    // PUSH to collection completely new purchases
+
     let to_push = [];
 
     async function included(equity_obj) {
