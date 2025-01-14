@@ -627,7 +627,7 @@ app.get("/getData", async function (req, res) {
     startDates.set(val.ticker, val.startDate);
   });
 
-  var oldestDate = findEarliestDate(startDates);
+  var oldestDate = startDates.length == 0 ? "2022-06-30" : findEarliestDate(startDates);
 
   const spy = await polygon_historical(["spy"], oldestDate, today).then(
     (res) => {
